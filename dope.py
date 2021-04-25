@@ -340,8 +340,8 @@ class DOPE():
 			else:
 				self.__hkdf_end = blake2b(byte_and(weak_end, strong_end), digest_size=32)
 
-		self.__hkdf_home.update(self.__end_param['ECC'])
-		self.__hkdf_end.update(self.__dope_key[-self.__bch.ecc_bytes:])
+		# self.__hkdf_home.update(self.__end_param['ECC'])
+		# self.__hkdf_end.update(self.__dope_key[-self.__bch.ecc_bytes:])
 
 
 	def ratchet_home(self, ecc:bytes):
