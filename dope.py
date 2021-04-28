@@ -596,7 +596,9 @@ class DOPE2(object):
 		else:
 			decoder = AES.new(khac, AES_MODE_LOOKUP[aes_mode], iv=niv)
 			data = decoder.decrypt(data)
-		block_size, bch_poly, ecc_size, nonce = int.from_bytes(data[:16], 'big'), int.from_bytes(data[16:32], 'big'), int.from_bytes(data[32:48], 'big'), data[48:]
+		block_size, bch_poly, ecc_size, nonce = int.from_bytes(data[:16], 'big'),\
+												int.from_bytes(data[16:32], 'big'),\
+												int.from_bytes(data[32:48], 'big'), data[48:]
 		nhac = blake2b(nonce, digest_size=32).digest()
 		vkac = blake2b(khac + nhac).digest()
 		if vkac != kvac:
@@ -707,7 +709,7 @@ class DOPE2(object):
 		return compress(packets + packets_ecc)
 
 
-	def decode(self, data : bytes, start : int, end : int) -> bytes:
+	def decode(self, data : bytes, start : int = 0, end : int = 0) -> bytes:
 		'''
 		Decode Data in DOPE Data format
 		by marshalling the byte string
