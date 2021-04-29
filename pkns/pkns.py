@@ -29,7 +29,7 @@ class PKNS_Table():
 		pass
 
 
-	def add_user(self, key : bytes, username : dict, address : tuple) -> None :
+	def add_user(self, key : str, username : dict, address : tuple) -> None :
 		'''
 		Add or Update Entry in the Table
 		'''
@@ -43,28 +43,28 @@ class PKNS_Table():
 			return
 		self.pkns_table[key] = {
 					'username' : username,
-					'address' : [address],
+					'address' : set([address]),
 					'key' : key_file
 				}
 
 
-	def add_address(self, key : bytes, address : tuple) -> None :
+	def add_address(self, key : str, address : tuple) -> None :
 		'''
 		Add or Update Addresses in the Table
 		'''
 		self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'), autocommit=True, tablename=self.peer_group)
-		self.pkns_table[key]['address'].append(address)
+		self.pkns_table[key]['address'].add(address)
 
 
-	def remove_address(self, key : bytes, address : tuple) -> None :
+	def remove_address(self, key : str, address : tuple) -> None :
 		'''
 		Add or Update Addresses in the Table
 		'''
 		self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'), autocommit=True, tablename=self.peer_group)
-		self.pkns_table[key]['address'].remove(address)
+		self.pkns_table[key]['address'].discard(address)
 
 
-	def purge_user(self, key : bytes) -> None :
+	def purge_user(self, key : str) -> None :
 		'''
 		Purge from Table
 		'''
@@ -206,14 +206,16 @@ class PKNS_Server(Base_TCP_Bus):
 				self.pool_sock.close()
 				break
 
-	def handler(self, c, a):
+	def handler(self, c : socket.socket, a):
 		self.socket = c
 		x = self.recv()
 		print(f"[{datetime.datetime.now().isoformat(' ')}] {a[0]}@{a[1]} : {x}")
+		#query handler
 		x = PKNS_Response()
 		x['status'] = 'WORKING'
 		x['server'] = socket.gethostbyaddr(self.socket.getsockname()[0])
 		x['client'] = a
+		x['uproto'] = c.proto
 		self.send(x)
 		self.socket.close()
 
@@ -316,11 +318,11 @@ class PKNS_Request(Base_TCP_Bus):
 	def get(self, packet : PKNS_Packet_Base):
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.socket.settimeout(5)
 		self.socket.connect((self.ip_address, self.port))
 		packet['host'] = self.ip_address
 		packet['port'] = self.port
 		self.send(packet)
-		self.socket.settimeout(100)
 		response = self.recv()
 		self.socket.close()
 		return response
@@ -369,14 +371,15 @@ def del_peergroup(obj, name):
 
 @tabman.command('add-user', short_help='Add Users to a Peergroup')
 @click.argument('peergroup', default='DEFAULT')
-@click.argument('key', type=os.PathLike, required=True)
+@click.argument('key', type=click.Path(), required=True)
 @click.argument('username')
 @click.argument('address', nargs=-1, required=True)
 @click.pass_obj
 def add_user(obj, peergroup : str, key : os.PathLike, username : str, address):
 	try:
-		click.secho(f'Removing Peergroup {name}...', nl=False)
-		# obj['PKNS'].add_user()
+		click.secho(f'Adding {username} to {peergroup}...', nl=False)
+		key_file = open(key).read()
+		obj['PKNS'].add_user(key_file, username, list(address))
 		click.secho('OK', fg='green')
 	except Exception:
 		click.secho('FAILED', fg='red')
@@ -385,10 +388,16 @@ def add_user(obj, peergroup : str, key : os.PathLike, username : str, address):
 
 @tabman.command('del-user', short_help='Remove Users from a Peergroup')
 @click.argument('peergroup', default='DEFAULT')
-@click.argument('username')
+@click.argument('fingerprint', required=True)
 @click.pass_obj
-def del_user(obj, peergroup : str, username : str, address):
-	print(name, obj['PKNS'], peergroup, list(address))
+def del_user(obj, peergroup : str, username : str):
+	try:
+		click.secho(f'Removing {username} to {peergroup}...', nl=False)
+		obj['PKNS'].purge_user(fingerprint)
+		click.secho('OK', fg='green')
+	except Exception:
+		click.secho('FAILED', fg='red')
+		raise Exception
 	pass
 
 @cli.group('server', short_help='PKNS Server Management', help='PKNS Server Manager')
