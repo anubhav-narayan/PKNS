@@ -203,7 +203,7 @@ class PKNS_Server(Base_TCP_Bus):
 		print(f"[{datetime.datetime.now().isoformat(' ')}] {a[0]}@{a[1]} : {x}")
 		x = PKNS_Response()
 		x['status'] = 'WORKING'
-		x['server'] = socket.gethostbyaddr(self.socket.getsockname()[0])[0]
+		x['server'] = socket.gethostbyaddr(self.socket.getsockname()[0])
 		x['client'] = a
 		self.send(x)
 		self.socket.close()
@@ -396,7 +396,7 @@ def status(obj):
 
 @cli.command('ping')
 @click.argument('address', default='0.0.0.0')
-@click.option('-n', '--nop', help='Number of Packets to send', type=int)
+@click.option('-n', '--nop', help='Number of Packets to send', type=int, default=1)
 def ping(address, nop : int):
 	request = PKNS_Request(address)
 	packet = PKNS_Ping()
