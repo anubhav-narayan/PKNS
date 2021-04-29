@@ -13,6 +13,7 @@ import socket
 import threading
 from loopyCryptor import Cryptor, Serializer
 from daemonocle import Daemon
+import datetime
 
 
 
@@ -201,7 +202,7 @@ class PKNS_Server(Base_TCP_Bus):
 		print(x)
 		x = PKNS_Response()
 		x['status'] = 'WORKING'
-		x['server'] = (self.ip_address, self.port)
+		x['server'] = socket.gethostbyaddr(self.socket.getsockname()[0])[0]
 		x['client'] = a
 		self.send(x)
 		self.socket.close()
@@ -284,6 +285,14 @@ class PKNS_Response(PKNS_Packet_Base):
 	def __init__(self):
 		super(PKNS_Response, self).__init__()
 		self.__dict__['tos'] = 'PKNS:RESPONSE'
+
+
+class PKNS_Ping(PKNS_Packet_Base):
+	"""docstring for PKNS_Ping"""
+	def __init__(self):
+		super(PKNS_Ping, self).__init__()
+		self.__dict__['tos'] = 'PKNS:PING'
+		
 		
 
 
@@ -385,11 +394,15 @@ def status(obj):
 	daemon.do_action('status')
 
 @cli.command('ping')
-@click.option('-i', '--address', help='Server IP Address', default='0.0.0.0')
-def ping(address):
+@click.argument('address', default='0.0.0.0')
+@click.option('-n', '--nop', help='Number of Packets to send', type=int)
+def ping(address, nop : int):
 	request = PKNS_Request(address)
 	packet = PKNS_Query()
-	print(request.get(packet))
+	for x in range(nop):
+		start = datetime.datetime.now()
+		print(request.get(packet))
+		print(datetime.datetime.now() - start)
 
 if __name__ == '__main__':
 	cli(obj={})
