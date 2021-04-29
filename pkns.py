@@ -67,15 +67,19 @@ class PKNS_Table():
 		self.pkns_name.pop(self.pkns_table[key])
 		self.pkns_table.pop(key)
 
-	def add_peergroup(self, peergroup : str, key_file : str) -> None :
+	def add_peergroup(self, peergroup : str, key_file=None) -> None :
 		'''
 		Add a Peer Group
 		'''
-		try:
+		if key_file != None:
 			key_file = open(key_file, 'rb').read()
-		except FileNotFoundError:
+		else:
 			key = RSA.generate(4096)
-			key_file = key.export_key()
+			key_public = key.publickey()
+			key_file = key_public.export_key()
+			master = key.export_key()
+			with open(os.path.abspath(f'PKNS_{self.peer_group}_MASTER.pem'), 'wb') as f:
+				f.write(master)
 		self.peer_table[peergroup] = key_file
 
 	def remove_peergroup(self, peergroup : str):
@@ -171,7 +175,7 @@ class Base_TCP_Bus():
 
 class PKNS_Server(Base_TCP_Bus):
 	"""docstring for PKNS_Server"""
-	def __init__(self, ip_address = '127.0.0.1', port : int=6300):
+	def __init__(self, ip_address = '0.0.0.0', port : int=6300):
 		super(PKNS_Server, self).__init__()
 		self.pool_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.pool_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -321,7 +325,7 @@ def tabman(obj):
 @click.option('-k', '--key-file', required=False, type=os.PathLike, help='Explicit Keys for the Peergroup')
 @click.pass_obj
 def add_peergroup(obj, name, key_file):
-	print(name, obj['PKNS'])
+	obj['PKNS'].add_peergroup()
 	pass
 
 @tabman.command('del-peergroup', short_help='Delete/Leave a Peergroup')
@@ -349,7 +353,7 @@ def del_user(obj, peergroup : str, name : str, address):
 	pass
 
 @cli.group('server', short_help='PKNS Server Management', help='PKNS Server Manager')
-@click.option('-i', '--host', help='IP Address to bind', default='127.0.0.1')
+@click.option('-i', '--host', help='IP Address to bind', default='0.0.0.0')
 @click.option('-p', '--port', help='Port to bind', default=6300, type=int)
 @click.pass_obj
 def server(obj, host : str, port : int):
@@ -359,6 +363,8 @@ def server(obj, host : str, port : int):
 @click.option('--debug', type=bool, default=False, is_flag=True, help='Enable Debug Info')
 @click.pass_obj
 def start(obj, debug):
+	click.secho('PKNS Server Address : ', nl=False)
+	click.secho(f'{obj['WORKER'].ip_address}', fg='green')
 	daemon = Daemon('PKNS Server', worker=obj['WORKER'].serve_endless,
 					detach=(not debug), pidfile="./PKNS.pid",
 					work_dir='./',
@@ -379,7 +385,7 @@ def status(obj):
 	daemon.do_action('status')
 
 @cli.command('ping')
-@click.option('-i', '--address', help='Server IP Address', default='127.0.0.1')
+@click.option('-i', '--address', help='Server IP Address', default='0.0.0.0')
 def ping(address):
 	request = PKNS_Request(address)
 	packet = PKNS_Query()
