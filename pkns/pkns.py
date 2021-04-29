@@ -2,7 +2,7 @@
 PKNS Class
 '''
 
-__version__ = "0.0.3"
+__version__ = "0.5.2"
 __author__ = "Anubhav Mattoo"
 
 from sqlitedict import SqliteDict
