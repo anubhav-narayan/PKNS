@@ -1,4 +1,4 @@
 # Specify filepatterns you want git to ignore.
 
 *.log
-__pycache__/*
+*__pycache__/*
