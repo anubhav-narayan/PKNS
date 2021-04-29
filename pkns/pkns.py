@@ -123,8 +123,8 @@ class Base_TCP_Bus():
         self._build_header = lambda size, md5: self._serialize((size, md5))
         self._read_header = lambda header: self._deserialize(header)
         self._build_ack = lambda size, md5: Cryptor.md5((size, md5)).encode()
-        self._verify_ack = lambda ack, size, md5:\
-                                  Cryptor.md5((size, md5)).encode() == ack
+        self._verify_ack = lambda ack, size, md5: Cryptor.md5((size, md5))\
+                                                         .encode() == ack
 
     # Section From Knight Bus
     def _send_bytes(self, bytes_: bytes):
@@ -198,7 +198,7 @@ class Base_TCP_Bus():
 
 class PKNS_Server(Base_TCP_Bus):
     """docstring for PKNS_Server"""
-    def __init__(self, ip_address = '0.0.0.0', port: int = 6300):
+    def __init__(self, ip_address='0.0.0.0', port: int = 6300):
         super(PKNS_Server, self).__init__()
         self.pool_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.pool_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -333,7 +333,7 @@ class PKNS_Ping(PKNS_Packet_Base):
 
 class PKNS_Request(Base_TCP_Bus):
     """docstring for PKNS_Request"""
-    def __init__(self, ip_address = '127.0.0.1', port: int = 6300):
+    def __init__(self, ip_address='127.0.0.1', port: int = 6300):
         super(PKNS_Request, self).__init__()
         self.ip_address = ip_address
         self.port = port
@@ -367,9 +367,13 @@ def tabman(obj):
 
 
 @tabman.command('add-peergroup', short_help='Add/Create a Peergroup')
-@click.option('-n', '--name', required=True, type=str, help='Name of the Peergroup')
-@click.option('-u', '--username', required=False, type=str, help='Your Peergroup Username', default='master', show_default=True)
-@click.option('-k', '--key-file', required=False, type=click.Path(), help='Explicit Keys for the Peergroup', default=None)
+@click.option('-n', '--name', required=True, type=str,
+              help='Name of the Peergroup')
+@click.option('-u', '--username', required=False, type=str,
+              help='Your Peergroup Username', default='master',
+              show_default=True)
+@click.option('-k', '--key-file', required=False, type=click.Path(),
+              help='Explicit Keys for the Peergroup', default=None)
 @click.pass_obj
 def add_peergroup(obj, username, name, key_file):
     try:
