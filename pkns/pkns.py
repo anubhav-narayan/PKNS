@@ -3,7 +3,7 @@
 PKNS Class
 '''
 
-__version__ = "0.5.2"
+__version__ = "0.5.15"
 __author__ = "Anubhav Mattoo"
 
 from sqlitedict import SqliteDict
@@ -15,6 +15,7 @@ import threading
 from loopyCryptor import Cryptor, Serializer
 from daemonocle import Daemon
 import datetime
+from hashlib import shake_128
 
 
 
@@ -33,43 +34,46 @@ class PKNS_Table():
 		Add or Update Entry in the Table
 		'''
 		self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'), autocommit=True, tablename=self.peer_group)
+		key_file = key
+		key = shake_128(key).hexdigest(8)
 		if key in self.pkns_table and username != self.pkns_table[key]:
 			raise ValueError("Invalid Key")
-		if key in self.pkns_table and username == self.pkns_table[key] and username in self.pkns_name:
-			self.add_address(username, address)
+		if key in self.pkns_table and username == self.pkns_table[key]:
+			self.add_address(key, address)
 			return
-		self.pkns_table[key] = username
-		self.pkns_name[username] = []
-		self.pkns_name[username].append(address)
+		self.pkns_table[key] = {
+					'username' : username,
+					'address' : [address],
+					'key' : key_file
+				}
 
 
-	def add_address(self, username : str, address : tuple) -> None :
+	def add_address(self, key : bytes, address : tuple) -> None :
 		'''
 		Add or Update Addresses in the Table
 		'''
 		self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'), autocommit=True, tablename=self.peer_group)
-		self.pkns_table[username].append(address)
+		self.pkns_table[key]['address'].append(address)
 
 
-	def remove_address(self, username : str, address : tuple) -> None :
+	def remove_address(self, key : bytes, address : tuple) -> None :
 		'''
 		Add or Update Addresses in the Table
 		'''
 		self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'), autocommit=True, tablename=self.peer_group)
-		self.pkns_table[username].pop(address)
+		self.pkns_table[key]['address'].remove(address)
 
 
-	def purge_entry(self, key : bytes) -> None :
+	def purge_user(self, key : bytes) -> None :
 		'''
 		Purge from Table
 		'''
 		self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'), autocommit=True, tablename=self.peer_group)
 		if key not in self.pkns_table:
 			raise ValueError("Invalid Key")
-		self.pkns_name.pop(self.pkns_table[key])
 		self.pkns_table.pop(key)
 
-	def add_peergroup(self, peergroup : str, key_file=None) -> None :
+	def add_peergroup(self, peergroup : str, username : str, key_file=None) -> None :
 		'''
 		Add a Peer Group
 		'''
@@ -80,16 +84,21 @@ class PKNS_Table():
 			key_public = key.publickey()
 			key_file = key_public.export_key()
 			master = key.export_key()
-			with open(os.path.abspath(f'PKNS_{self.peer_group}_MASTER.pem'), 'wb') as f:
+			with open(os.path.abspath(f'./master/PKNS_{peergroup}_MASTER.pem'), 'wb') as f:
 				f.write(master)
-		self.peer_table[peergroup] = key_file
+		self.peer_table[peergroup] = shake_128(key_file).hexdigest(8)
+		self.peer_group = peergroup
+		self.add_user(key_file, username, '0.0.0.0')
 
 	def remove_peergroup(self, peergroup : str):
 		'''
 		Remove a Peergroup
 		'''
 		try:
-			del self.peer_table[peergroup]
+			self.peer_table.pop(peergroup)
+			self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'), autocommit=True, tablename=peergroup)
+			self.pkns_table.clear()
+			del self.pkns_table
 		except KeyError:
 			raise Exception(f'Peergroup {peergroup} does not exist')
 
@@ -332,33 +341,53 @@ def tabman(obj):
 
 @tabman.command('add-peergroup', short_help='Add/Create a Peergroup')
 @click.option('-n', '--name', required=True, type=str, help='Name of the Peergroup')
-@click.option('-k', '--key-file', required=False, type=os.PathLike, help='Explicit Keys for the Peergroup')
+@click.option('-u', '--username', required=False, type=str, help='Your Peergroup USername', default='master')
+@click.option('-k', '--key-file', required=False, type=click.Path(), help='Explicit Keys for the Peergroup', default=None)
 @click.pass_obj
-def add_peergroup(obj, name, key_file):
-	obj['PKNS'].add_peergroup()
+def add_peergroup(obj, username, name, key_file):
+	try:
+		click.secho(f'Adding Peergroup {name}...', nl=False)
+		obj['PKNS'].add_peergroup(name, username, key_file)
+		click.secho('OK', fg='green')
+	except Exception:
+		click.secho('FAILED', fg='red')
+		raise Exception
 	pass
 
 @tabman.command('del-peergroup', short_help='Delete/Leave a Peergroup')
 @click.option('-n', '--name', required=True, type=str, help='Name of the Peergroup')
 @click.pass_obj
 def del_peergroup(obj, name):
-	print(name, obj['PKNS'])
+	try:
+		click.secho(f'Removing Peergroup {name}...', nl=False)
+		obj['PKNS'].remove_peergroup(name)
+		click.secho('OK', fg='green')
+	except Exception:
+		click.secho('FAILED', fg='red')
+		raise Exception
 	pass
 
 @tabman.command('add-user', short_help='Add Users to a Peergroup')
 @click.argument('peergroup', default='DEFAULT')
+@click.argument('key', type=os.PathLike, required=True)
 @click.argument('username')
 @click.argument('address', nargs=-1, required=True)
 @click.pass_obj
-def add_user(obj, peergroup : str, name : str, address):
-	print(name, obj['PKNS'], peergroup, list(address))
+def add_user(obj, peergroup : str, key : os.PathLike, username : str, address):
+	try:
+		click.secho(f'Removing Peergroup {name}...', nl=False)
+		# obj['PKNS'].add_user()
+		click.secho('OK', fg='green')
+	except Exception:
+		click.secho('FAILED', fg='red')
+		raise Exception
 	pass
 
 @tabman.command('del-user', short_help='Remove Users from a Peergroup')
 @click.argument('peergroup', default='DEFAULT')
 @click.argument('username')
 @click.pass_obj
-def del_user(obj, peergroup : str, name : str, address):
+def del_user(obj, peergroup : str, username : str, address):
 	print(name, obj['PKNS'], peergroup, list(address))
 	pass
 
