@@ -212,10 +212,24 @@ class PKNS_Server(Base_TCP_Bus):
 		print(f"[{datetime.datetime.now().isoformat(' ')}] {a[0]}@{a[1]} : {x}")
 		#query handler
 		x = PKNS_Response()
+
+		def get_constants(prefix):
+			'''
+			Create a dictionary mapping
+			socket module constants to their names.
+			'''
+			return dict( (getattr(socket, n), n)
+						 for n in dir(socket)
+						 if n.startswith(prefix))
+
+		families = get_constants('AF_')
+		protocols = get_constants('IPPROTO_')
+
 		x['status'] = 'WORKING'
 		x['server'] = socket.gethostbyaddr(self.socket.getsockname()[0])
 		x['client'] = a
-		x['uproto'] = c.proto
+		x['uproto'] = protocols[c.proto]
+		x['transport'] = families[c.family]
 		self.send(x)
 		self.socket.close()
 
