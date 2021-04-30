@@ -111,19 +111,19 @@ def del_user(obj, peergroup: str, username: str):
               show_default=True)
 @click.option('-p', '--port', help='Port to bind', default=6300, type=int,
               show_default=True)
-@click.pass_obj
-def server(obj, host: str, port: int):
-    obj['WORKER'] = PKNS_Server()
+@click.pass_context
+def server(ctx, host: str, port: int):
+    ctx.obj['WORKER'] = PKNS_Server()
 
 
 @server.command('start', short_help='Start the PKNS Server')
 @click.option('--debug', type=bool, default=False, is_flag=True,
               help='Enable Debug Info')
-@click.pass_obj
-def start(obj, debug):
+@click.pass_context
+def start(ctx, debug):
     click.secho('PKNS Server Address: ', nl=False)
-    click.secho(f"{obj['WORKER'].ip_address}", fg='green')
-    daemon = Daemon('PKNS Server', worker=obj['WORKER'].serve_endless,
+    click.secho(f"{ctx.obj['WORKER'].ip_address}", fg='green')
+    daemon = Daemon('PKNS Server', worker=ctx.obj['WORKER'].serve_endless,
                     detach=(not debug), pidfile="./PKNS.pid",
                     work_dir='./',
                     stdout_file="./PKNS.log", stderr_file="./PKNS_error.log",
@@ -133,35 +133,26 @@ def start(obj, debug):
 
 @server.command('stop', short_help='Stop the PKNS Server')
 @click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
-@click.pass_obj
-def stop(obj, force):
+def stop(force):
     daemon = Daemon('PKNS Server', pidfile="./PKNS.pid")
     daemon.stop(force=force)
 
 
-@server.command('status', short_help='File Server Status')
+@server.command('status', short_help='PKNS Server Status')
 @click.option('-j', '--json', help='Return JSON', default=False, is_flag=True)
-@click.pass_obj
-def status(obj, json):
+def status(json):
     daemon = Daemon('PKNS Server', pidfile="./PKNS.pid")
     daemon.status(json=json)
-
-
-@server.command('reload', short_help='Reload Daemon')
-@click.pass_obj
-def reload(obj):
-    daemon = Daemon('PKNS Server', pidfile="./PKNS.pid")
-    daemon.reload()
 
 
 @server.command('restart', short_help='Restart PKNS Server')
 @click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
 @click.option('--debug', type=bool, default=False, is_flag=True,
               help='Enable Debug Info')
-@click.pass_obj
-def reload(obj, debug, force):
-    daemon = Daemon('PKNS Server', pidfile="./PKNS.pid")
-    daemon.restart(force=force, debug=debug)
+@click.pass_context
+def restart(ctx, debug, force):
+    ctx.invoke(stop, force=force)
+    ctx.invoke(start, debug=debug)
 
 
 # Ping
