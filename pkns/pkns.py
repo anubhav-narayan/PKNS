@@ -164,10 +164,14 @@ def ping(address, nop: int):
     from pprint import pprint
     request = PKNS_Request(address)
     packet = PKNS_Ping()
+    time = []
     for x in range(nop):
         start = datetime.datetime.now()
         pprint(request.get(packet))
-        print((datetime.datetime.now() - start))
+        rtime = (datetime.datetime.now() - start)
+        time.append(rtime.microseconds / 1E3)
+        print(f'time={rtime.microseconds / 1E3}ms')
+    print(f'Average Time={sum(time)/len(time):.3f}ms, Packet(s)={nop}')
 
 
 if __name__ == '__main__':
