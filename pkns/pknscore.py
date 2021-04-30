@@ -337,7 +337,7 @@ class PKNS_Request(Base_TCP_Bus):
     def get(self, packet: PKNS_Packet_Base):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.settimeout(5)
+        self.socket.settimeout(30)
         self.socket.connect((self.ip_address, self.port))
         packet['host'] = self.ip_address
         packet['port'] = self.port
