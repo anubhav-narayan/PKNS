@@ -5,3 +5,10 @@
 *.pyc
 *.pem
 *.pid
+*.csv
+*.xlsx
+*.ipynb
+*.png
+PandasGUI.py
+python-bchlib/*
+plots/*
