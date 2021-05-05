@@ -121,16 +121,10 @@ class PKNS_Table():
         Peergroup Query
         '''
         if peergroup in self.peer_table:
-<<<<<<< HEAD
             return {peergroup: {'name': self.peer_table[peergroup]}}
         else:
             return {k: {'name': v} for k, v in self.peer_table.items()
                     if v == peergroup}
-=======
-            return {peergroup: self.peer_table[peergroup]}
-        else:
-            return {k: v for k, v in self.peer_table.items() if v == peergroup}
->>>>>>> b3c80242256a973863f79c81467b51b734fe54d4
 
     def get_user(self, peergroup: str, username: str, get_key: bool = False):
         '''
@@ -162,10 +156,6 @@ class PKNS_Table():
                     res = {username: self.pkns_table[peergroup]}
                     res[username].pop('key', None)
                     self.pkns_table.close()
-<<<<<<< HEAD
-                    res.update(peergroups[peergroup])
-=======
->>>>>>> b3c80242256a973863f79c81467b51b734fe54d4
                     fres[peergroup] = res
                 else:
                     res = {k: v for k, v in self.pkns_table.items()
@@ -173,10 +163,6 @@ class PKNS_Table():
                     for x in res:
                         res[x].pop('key', None)
                     self.pkns_table.close()
-<<<<<<< HEAD
-                    res.update(peergroups[peergroup])
-=======
->>>>>>> b3c80242256a973863f79c81467b51b734fe54d4
                     fres[peergroup] = res
             return fres
 
@@ -428,7 +414,6 @@ class PKNS_Query_Handler():
         Parse PKNS Query to Componenets
         '''
         import re
-<<<<<<< HEAD
         ipv4 = r'(?P<ipv4>((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'\
                + r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))'\
                + r'(?P<port>:[0-9]{,5})?'
@@ -454,9 +439,6 @@ class PKNS_Query_Handler():
                 + r'/?'\
                 + r'(?P<peergroup>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?'\
                 + r'/?(?P<username>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?$'
-=======
-        regex = r'''^pkns://(?P<base>(?P<ipv4>((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?P<port>:[0-9]{,5})?|(?P<ipv6>([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))|(?P<domain>([a-zA-Z]\.?|[0-9]){,63}(?P<dport>:[0-9]{,5})?))/?(?P<peergroup>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?/?(?P<username>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?$'''
->>>>>>> b3c80242256a973863f79c81467b51b734fe54d4
         query = re.match(regex, query_str).groupdict()
         query = {k: v for k, v in query.items()
                  if v is not None}
@@ -468,7 +450,6 @@ class PKNS_Query_Handler():
             query.pop('domain', None)
         return query
 
-<<<<<<< HEAD
     def resolve(self, query: dict):
         '''
         PKNS Query Resolver
@@ -488,10 +469,3 @@ class PKNS_Query_Handler():
         response.update(rpeers)
         response.update(rusers)
         return response
-=======
-    # def resolve(self, query: dict):
-    #     '''
-    #     PKNS Query Resolver
-    #     '''
-    #     if query['base'] = 'localhost'
->>>>>>> b3c80242256a973863f79c81467b51b734fe54d4
