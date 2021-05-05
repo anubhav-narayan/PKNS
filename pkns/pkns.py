@@ -3,7 +3,7 @@
 PKNS CLI
 '''
 
-__version__ = "0.0.4"
+__version__ = "0.1.4"
 __author__ = "Anubhav Mattoo"
 
 
@@ -11,7 +11,8 @@ from pknscore import (
     PKNS_Table,
     PKNS_Server,
     PKNS_Request,
-    PKNS_Ping
+    PKNS_Ping,
+    PKNS_Query_Handler
     )
 from daemonocle import Daemon
 import click
@@ -48,17 +49,32 @@ def add_peergroup(obj, username, name, key_file):
         click.secho(f'Adding Peergroup {name}...', nl=False)
         obj['PKNS'].add_peergroup(name, username, key_file)
         click.secho('OK', fg='green')
-    except Exception:
+    except Exception as fail:
         click.secho('FAILED', fg='red')
-        raise Exception
+        raise fail
     pass
+
+
+@tabman.command('get-peergroup', short_help='Get Info of a Peergroup')
+@click.argument('name', required=True, type=str)
+@click.pass_obj
+def get_peergroup(obj, name: str):
+    from pprint import pprint
+    try:
+        click.secho(f'Finding Peergroup {name}...', nl=False)
+        res = obj['PKNS'].get_peergroup(name)
+        click.secho('FOUND', fg='green')
+    except Exception as fail:
+        click.secho('FAILED', fg='red')
+        raise fail
+    pprint(res)
 
 
 @tabman.command('del-peergroup', short_help='Delete/Leave a Peergroup')
 @click.option('-n', '--name', required=True, type=str,
-              help='Name of the Peergroup')
+              help='Fingerprint of the Peergroup')
 @click.pass_obj
-def del_peergroup(obj, name):
+def del_peergroup(obj, name: str):
     try:
         click.secho(f'Removing Peergroup {name}...', nl=False)
         obj['PKNS'].remove_peergroup(name)
@@ -81,6 +97,7 @@ def add_user(obj, fingerprint: str, peergroup: str, key: os.PathLike,
     try:
         click.secho(f'Adding {username} to {peergroup}...', nl=False)
         key_file = open(key).read()
+        obj['PKNS'].get_peergroup(peergroup)
         obj['PKNS'].add_user(key_file, username, list(address))
         click.secho('OK', fg='green')
     except Exception:
@@ -89,9 +106,25 @@ def add_user(obj, fingerprint: str, peergroup: str, key: os.PathLike,
     pass
 
 
-@tabman.command('del-user', short_help='Remove Users from a Peergroup')
+@tabman.command('get-user', short_help='Get Users\' Info from a Peergroup')
+@click.argument('name', required=True, type=str)
 @click.argument('peergroup', default='DEFAULT')
+@click.pass_obj
+def get_user(obj, peergroup: str, name: str):
+    from pprint import pprint
+    try:
+        click.secho(f'Getting {name} from {peergroup}...', nl=False)
+        res = obj['PKNS'].get_user(peergroup, name)
+        click.secho('FOUND', fg='green')
+    except Exception:
+        click.secho('FAILED', fg='red')
+        raise Exception
+    pprint(res)
+
+
+@tabman.command('del-user', short_help='Remove Users from a Peergroup')
 @click.argument('fingerprint', required=True)
+@click.argument('peergroup', default='DEFAULT')
 @click.pass_obj
 def del_user(obj, peergroup: str, username: str):
     try:
@@ -172,6 +205,16 @@ def ping(address, nop: int):
         time.append(rtime.microseconds / 1E3)
         print(f'time={rtime.microseconds / 1E3}ms')
     print(f'Average Time={sum(time)/len(time):.3f}ms, Packet(s)={nop}')
+
+
+# Query
+@cli.command('query')
+@click.argument('query', type=str)
+def query(query: str):
+    handler = PKNS_Query_Handler()
+    parse = handler.parse(query)
+    resl = handler.resolve(parse)
+    print(resl)
 
 
 if __name__ == '__main__':
