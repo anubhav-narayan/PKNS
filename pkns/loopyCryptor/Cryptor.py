@@ -4,7 +4,7 @@ from Crypto.Cipher import AES, PKCS1_v1_5
 from Crypto.Hash import MD5
 from Crypto.PublicKey import RSA
 
-from loopyCryptor.Serializer import *
+from .Serializer import *
 
 
 class Cryptor:
