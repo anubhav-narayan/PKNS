@@ -12,7 +12,8 @@ from pknscore import (
     PKNS_Server,
     PKNS_Request,
     PKNS_Ping,
-    PKNS_Query_Handler
+    PKNS_Query,
+    parse
     )
 from daemonocle import Daemon
 import click
@@ -210,11 +211,27 @@ def ping(address, nop: int):
 # Query
 @cli.command('query')
 @click.argument('query', type=str)
-def query(query: str):
-    handler = PKNS_Query_Handler()
-    parse = handler.parse(query)
-    resl = handler.resolve(parse)
-    print(resl)
+@click.pass_obj
+def query(obj, query: str):
+    from pprint import pprint
+    query = parse(query)
+    if 'domain' in query:
+        host = query.pop('domain').split(':')[0]
+    if 'dport' in query:
+        port = int(query.pop('dport').strip(':'))
+    else:
+        port = 6300
+    if 'ipv4' in query:
+        host = query.pop('ipv4')
+    if 'port' in query:
+        port = int(query.pop('port'))
+    else:
+        port = 6300
+    query.pop('base')
+    request = PKNS_Request(host, port)
+    packet = PKNS_Query()
+    packet['query'] = query
+    pprint(request.get(packet))
 
 
 if __name__ == '__main__':
