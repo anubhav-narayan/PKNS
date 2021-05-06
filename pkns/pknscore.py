@@ -214,7 +214,7 @@ class PKNS_Table():
                 data.update(sync[x])
                 self.peer_table[x] = data
             else:
-                self.peer_table[x] = data
+                self.peer_table[x] = sync[x]
 
 
 class Base_TCP_Bus():
