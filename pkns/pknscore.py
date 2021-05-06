@@ -332,9 +332,10 @@ class PKNS_Server(Base_TCP_Bus):
             table = PKNS_Table()
             x['reply'] = table.resolve(pack['query'])
         if pack['tos'] == 'PKNS:PING':
-            from daemonocle import Daemon
-            x['stats'] = Daemon('PKNS Server',
-                                pidfile='./PKNS.pid').get_status()
+            # from daemonocle import Daemon
+            # x['stats'] = Daemon('PKNS Server',
+            #                     pidfile='./PKNS.pid').get_status()
+            pass
         if pack['tos'] == 'PKNS:SYNC':
             for i in pack['sync']:
                 pack['sync'][i]['address'] = a[0]
@@ -397,6 +398,7 @@ class PKNS_Packet_Base(dict):
 
     def values(self):
         return self.__dict__.values()
+
 
     def items(self):
         return self.__dict__.items()
