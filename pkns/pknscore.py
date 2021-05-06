@@ -505,8 +505,8 @@ def parse(query_str: str):
             + ipv6 + r'|'\
             + domain\
             + r'/?'\
-            + r'(?P<peergroup>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?'\
-            + r'/?(?P<username>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?$'
+            + r'(?P<peergroup>[A-Fa-f0-9]{16}|[^$\/\\\.\,/w]{0,100})?'\
+            + r'/?(?P<username>[A-Fa-f0-9]{16}|[^$\/\\\.\,/w]{0,100})?$'
     query = re.match(regex, query_str).groupdict()
     query = {k: v for k, v in query.items()
              if v is not None}
