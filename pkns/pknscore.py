@@ -100,7 +100,7 @@ class PKNS_Table():
         if key_file is not None:
             key_file = open(key_file, 'rb').read()
         else:
-            key = RSA.generate(4096)
+            key = RSA.generate(2048)
             key_public = key.publickey()
             key_file = key_public.export_key()
             master = key.export_key()
