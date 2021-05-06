@@ -13,6 +13,7 @@ from pknscore import (
     PKNS_Request,
     PKNS_Ping,
     PKNS_Query,
+    PKNS_Sync,
     parse
     )
 from daemonocle import Daemon
@@ -231,6 +232,19 @@ def query(obj, query: str):
     request = PKNS_Request(host, port)
     packet = PKNS_Query()
     packet['query'] = query
+    pprint(request.get(packet))
+
+
+# Sync
+@cli.command('sync')
+@click.argument('address', default='0.0.0.0')
+@click.pass_obj
+def query(obj, address: str):
+    from pprint import pprint
+    request = PKNS_Request(address)
+    packet = PKNS_Sync()
+    packet['sync'] = obj['PKNS'].resolve({'peergroup': '',
+                                          'username': ''})
     pprint(request.get(packet))
 
 
