@@ -90,10 +90,10 @@ class PKNS_Table():
             raise ValueError("Invalid Key")
         self.pkns_table.pop(fingerprint)
 
-    def add_peergroup(self, peergroup: str,
-                      username: str, key_file=None) -> None:
+    def create_peergroup(self, peergroup: str,
+                         username: str, key_file=None) -> None:
         '''
-        Add a Peer Group
+        Add/Create a Peer Group
         '''
         if peergroup in self.peer_table:
             raise NameError(f'{peergroup} already exists!')
@@ -117,6 +117,17 @@ class PKNS_Table():
                                     + key_file).hexdigest(8)
         self.add_user(key_file, username,
                       '0.0.0.0', shake_128(key_file).hexdigest(8))
+
+    def add_peergroup(self, fingerprint: str, name: str, address: str):
+        '''
+        Add Remote Peergroup
+        '''
+        try:
+            # Hex Error Check
+            int(fingerprint, 16)
+        except ValueError:
+            raise
+        self.peer_table[fingerprint] = {'name': name, 'address': address}
 
     def remove_peergroup(self, peergroup: str):
         '''
@@ -332,9 +343,10 @@ class PKNS_Server(Base_TCP_Bus):
             table = PKNS_Table()
             x['reply'] = table.resolve(pack['query'])
         if pack['tos'] == 'PKNS:PING':
-            from daemonocle import Daemon
-            x['stats'] = Daemon('PKNS Server',
-                                pidfile='./PKNS.pid').get_status()
+            # from daemonocle import Daemon
+            # x['stats'] = Daemon('PKNS Server',
+            #                     pidfile='./PKNS.pid').get_status()
+            pass
         if pack['tos'] == 'PKNS:SYNC':
             for i in pack['sync']:
                 pack['sync'][i]['address'] = a[0]
@@ -397,6 +409,7 @@ class PKNS_Packet_Base(dict):
 
     def values(self):
         return self.__dict__.values()
+
 
     def items(self):
         return self.__dict__.items()
