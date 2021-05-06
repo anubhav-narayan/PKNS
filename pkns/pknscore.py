@@ -2,7 +2,7 @@
 PKNS Core Classes and Funtions
 '''
 
-__version__ = "0.6.0"
+__version__ = "0.6.5"
 __author__ = "Anubhav Mattoo"
 
 from sqlitedict import SqliteDict
@@ -14,6 +14,20 @@ from Cryptor import Cryptor
 import Serializer
 from hashlib import shake_128
 import datetime
+
+
+def get_constants(prefix):
+    '''
+    Create a dictionary mapping
+    socket module constants to their names.
+    '''
+    return dict((getattr(socket, n), n)
+                for n in dir(socket)
+                if n.startswith(prefix))
+
+
+families = get_constants('AF_')
+protocols = get_constants('IPPROTO_')
 
 
 class PKNS_Table():
@@ -90,14 +104,15 @@ class PKNS_Table():
             key_public = key.publickey()
             key_file = key_public.export_key()
             master = key.export_key()
-            with open(os.path.abspath(f'./master/PKNS_{self.peer_group}_MASTER.pem'),
+            with open(os.path.abspath(f"./master/{shake_128(peergroup.encode('utf8')+ key_file).hexdigest(8)}_MASTER.pem"),
                       'wb') as f:
                 f.write(master)
             import stat
-            os.chmod(os.path.abspath(f'./master/PKNS_{self.peer_group}_MASTER.pem'),
-                     stat.S_IREAD | stat.S_IWRITE)
+            os.chmod(os.path.abspath(f"./master/{shake_128(peergroup.encode('utf8')+ key_file).hexdigest(8)}_MASTER.pem"),
+                     0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
-                        + key_file).hexdigest(8)] = peergroup
+                        + key_file).hexdigest(8)] = {'name': peergroup,
+                                                     'address': '0.0.0.0'}
         self.peer_group = shake_128(peergroup.encode('utf8')
                                     + key_file).hexdigest(8)
         self.add_user(key_file, username,
@@ -121,10 +136,10 @@ class PKNS_Table():
         Peergroup Query
         '''
         if peergroup in self.peer_table:
-            return {peergroup: {'name': self.peer_table[peergroup]}}
+            return {peergroup: self.peer_table[peergroup]}
         else:
-            return {k: {'name': v} for k, v in self.peer_table.items()
-                    if v == peergroup}
+            return {k: v for k, v in self.peer_table.items()
+                    if v['name'] == peergroup}
 
     def get_user(self, peergroup: str, username: str, get_key: bool = False):
         '''
@@ -170,15 +185,14 @@ class PKNS_Table():
                     fres[peergroup] = res
             return fres
 
-    def resolve(self, query: dict):
+    def resolve(self, query: dict) -> dict:
         '''
         PKNS Query Resolver
         '''
-        # query = parse(query)
         peergroup = query['peergroup']
         username = query['username']
         if peergroup == '':
-            rpeers = {k: {'name': v} for k, v in self.peer_table.items()}
+            rpeers = {k: v for k, v in self.peer_table.items()}
         else:
             rpeers = self.get_peergroup(peergroup)
         if username == '':
@@ -186,9 +200,21 @@ class PKNS_Table():
         else:
             rusers = self.get_user(peergroup, username)
         response = {}
+        rpeers.update(rusers)
         response.update(rpeers)
-        response.update(rusers)
         return response
+
+    def sync(self, sync: dict) -> None:
+        '''
+        PKNS Table Sync
+        '''
+        for x in sync:
+            if x in self.peer_table:
+                data = self.peer_table[x]
+                data.update(sync[x])
+                self.peer_table[x] = data
+            else:
+                self.peer_table[x] = data
 
 
 class Base_TCP_Bus():
@@ -299,7 +325,7 @@ class PKNS_Server(Base_TCP_Bus):
     def handler(self, c: socket.socket, a):
         self.socket = c
         pack = self.recv()
-        print(f"[{datetime.datetime.now().isoformat(' ')}]{a[0]}@{a[1]}: {pack['tos']}")
+        print(f"[{datetime.datetime.now().isoformat(' ')}] {a[0]}@{a[1]}: {pack['tos']}")
         x = PKNS_Response()
         # query handler
         if pack['tos'] == 'PKNS:QUERY':
@@ -307,20 +333,18 @@ class PKNS_Server(Base_TCP_Bus):
             x['reply'] = table.resolve(pack['query'])
         if pack['tos'] == 'PKNS:PING':
             from daemonocle import Daemon
-            x['stats'] = Daemon('PKNS Server', pidfile='./PKNS.pid').get_status()
-
-        def get_constants(prefix):
-            '''
-            Create a dictionary mapping
-            socket module constants to their names.
-            '''
-            return dict((getattr(socket, n), n)
-                        for n in dir(socket)
-                        if n.startswith(prefix))
-
-        families = get_constants('AF_')
-        protocols = get_constants('IPPROTO_')
-
+            x['stats'] = Daemon('PKNS Server',
+                                pidfile='./PKNS.pid').get_status()
+        if pack['tos'] == 'PKNS:SYNC':
+            for i in pack['sync']:
+                pack['sync'][i]['address'] = a[0]
+            try:
+                table = PKNS_Table()
+                table.sync(pack['sync'])
+                x['reply'] = table.resolve({'peergroup': '', 'username': ''})
+            except Exception:
+                pass
+                x['reply'] = 'FAILED'
         x['status'] = 'WORKING'
         x['server'] = socket.gethostbyaddr(self.socket.getsockname()[0])
         x['client'] = a
@@ -415,6 +439,13 @@ class PKNS_Ping(PKNS_Packet_Base):
         self.__dict__['tos'] = 'PKNS:PING'
 
 
+class PKNS_Sync(PKNS_Packet_Base):
+    """docstring for PKNS_Sync"""
+    def __init__(self):
+        super(PKNS_Sync, self).__init__()
+        self.__dict__['tos'] = 'PKNS:SYNC'
+
+
 class PKNS_Request(Base_TCP_Bus):
     """docstring for PKNS_Request"""
     def __init__(self, ip_address='127.0.0.1', port: int = 6300):
@@ -457,7 +488,7 @@ def parse(query_str: str):
            + r'1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}'\
            + r':((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}'\
            + r'(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))'
-    domain = r'(?P<domain>([a-zA-Z]\.?|[0-9]){,63}(?P<dport>:[0-9]{,5})?))'
+    domain = r'(?P<domain>([a-zA-Z0-9]\.?|[0-9]){,63}(?P<dport>:[0-9]{,5})?))'
     regex = r'^pkns://(?P<base>' + ipv4 + r'|'\
             + ipv6 + r'|'\
             + domain\
