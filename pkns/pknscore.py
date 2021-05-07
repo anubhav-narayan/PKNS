@@ -214,7 +214,8 @@ class PKNS_Table():
                 data['address'].add(sync[x]['address'])
                 self.peer_table[x] = data
             else:
-                sync[x]['address'] = {sync[x]['address'], }
+                if type(sync[x]['address']) is not set:
+                    sync[x]['address'] = {sync[x]['address'], }
                 self.peer_table[x] = sync[x]
 
 
