@@ -112,7 +112,7 @@ class PKNS_Table():
                      0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
-                                                     'address': '0.0.0.0'}
+                                                     'address': set{'0.0.0.0'}}
         self.peer_group = shake_128(peergroup.encode('utf8')
                                     + key_file).hexdigest(8)
         self.add_user(key_file, username,
@@ -211,7 +211,8 @@ class PKNS_Table():
         for x in sync:
             if x in self.peer_table:
                 data = self.peer_table[x]
-                data.update(sync[x])
+                for i in sync[x]['address']:
+                    data['address'].add(i)
                 self.peer_table[x] = data
             else:
                 self.peer_table[x] = sync[x]
