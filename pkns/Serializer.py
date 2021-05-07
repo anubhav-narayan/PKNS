@@ -1,30 +1,26 @@
-import pickle
+import pickle5 as pickle
 
 
-def to_byte(obj, force_convert=True):
-    """
-    make sure `text` is bytes
-
-    :raise AttributeError: Text is not processable
-    """
+def to_byte(obj, force_convert: bool = True) -> bytes:
+    '''
+    Serialize Object to Bytes
+    '''
     if isinstance(obj, bytes) and not force_convert:
         return obj
     elif isinstance(obj, str) and not force_convert:
-        return obj.encode()
+        return obj.encode('utf8')
     else:
         return pickle.dumps(obj)
 
 
-def to_obj(byte):
-    return pickle.loads(byte)
+def to_obj(data: bytes):
+    return pickle.loads(data)
 
 
-def byte_to_str(text, do_convert=True):
-    """
-    make sure `text` is string if `do_convert`
-
-    :raise AttributeError: Text is not processable
-    """
+def byte_to_str(text: bytes, do_convert=True):
+    '''
+    Bytes to String
+    '''
     if not do_convert:
         return text
     elif isinstance(text, str):
@@ -39,24 +35,22 @@ def byte_to_str(text, do_convert=True):
         )
 
 
-def cut_bytes(bytes, cut_length=64):
-    """
-    Split the bytes by fixed length
+def cut_bytes(data: bytes, fixed_length: int = 64) -> list:
+    ''''
+    Split the Data by fixed length
+    '''
 
-    :param bytes: bytes to be cut
-    :param cut_length: cut length, default is 50
-    """
-
-    byte_list = [bytes[cut_length * i:cut_length * i + cut_length] for i in range(len(bytes) // cut_length)]
-    if len(bytes) % cut_length != 0:
-        byte_list.append(bytes[-(len(bytes) % cut_length):])
+    byte_list = [data[fixed_length * i:fixed_length * i + fixed_length]
+                 for i in range(len(data) // fixed_length)]
+    if len(data) % fixed_length != 0:
+        byte_list.append(data[-(len(data) % fixed_length):])
     return byte_list
 
 
-def concat_byte_list(byte_list, add_break=True):
-    """
-    concat a byte list
-    """
+def concat_byte_list(byte_list: list, add_break: bool = True) -> bytes:
+    '''
+    Concat Byte List optionally with Breaks
+    '''
     res = b''
     for b in list(byte_list):
         res += (b + b'[BRK]') if add_break else b

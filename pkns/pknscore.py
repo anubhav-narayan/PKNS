@@ -112,7 +112,7 @@ class PKNS_Table():
                      0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
-                                                     'address': set{'0.0.0.0'}}
+                                                     'address': {'0.0.0.0', }}
         self.peer_group = shake_128(peergroup.encode('utf8')
                                     + key_file).hexdigest(8)
         self.add_user(key_file, username,
@@ -211,10 +211,10 @@ class PKNS_Table():
         for x in sync:
             if x in self.peer_table:
                 data = self.peer_table[x]
-                for i in sync[x]['address']:
-                    data['address'].add(i)
+                data['address'].add(sync[x]['address'])
                 self.peer_table[x] = data
             else:
+                sync[x]['address'] = {sync[x]['address'], }
                 self.peer_table[x] = sync[x]
 
 
@@ -458,7 +458,6 @@ class PKNS_Request(Base_TCP_Bus):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.settimeout(30)
         self.socket.connect((self.ip_address, self.port))
-        packet['address'] = self.ip_address, self.port
         self.send(packet)
         response = self.recv()
         self.socket.close()
