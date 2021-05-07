@@ -90,10 +90,10 @@ class PKNS_Table():
             raise ValueError("Invalid Key")
         self.pkns_table.pop(fingerprint)
 
-    def add_peergroup(self, peergroup: str,
-                      username: str, key_file=None) -> None:
+    def create_peergroup(self, peergroup: str,
+                         username: str, key_file=None) -> None:
         '''
-        Add a Peer Group
+        Add/Create a Peer Group
         '''
         if peergroup in self.peer_table:
             raise NameError(f'{peergroup} already exists!')
@@ -117,6 +117,17 @@ class PKNS_Table():
                                     + key_file).hexdigest(8)
         self.add_user(key_file, username,
                       '0.0.0.0', shake_128(key_file).hexdigest(8))
+
+    def add_peergroup(self, fingerprint: str, name: str, address: str):
+        '''
+        Add Remote Peergroup
+        '''
+        try:
+            # Hex Error Check
+            int(fingerprint, 16)
+        except ValueError:
+            raise
+        self.peer_table[fingerprint] = {'name': name, 'address': address}
 
     def remove_peergroup(self, peergroup: str):
         '''
@@ -494,8 +505,8 @@ def parse(query_str: str):
             + ipv6 + r'|'\
             + domain\
             + r'/?'\
-            + r'(?P<peergroup>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?'\
-            + r'/?(?P<username>[A-Fa-f0-9]{16}|[A-Za-z0-9]{0,100})?$'
+            + r'(?P<peergroup>[A-Fa-f0-9]{16}|[^$\/\\\.\,/w]{0,100})?'\
+            + r'/?(?P<username>[A-Fa-f0-9]{16}|[^$\/\\\.\,/w]{0,100})?$'
     query = re.match(regex, query_str).groupdict()
     query = {k: v for k, v in query.items()
              if v is not None}

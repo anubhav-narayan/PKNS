@@ -240,7 +240,7 @@ def query(obj, query: str):
 @cli.command('sync')
 @click.argument('address', default='0.0.0.0')
 @click.pass_obj
-def query(obj, address: str):
+def sync(obj, address: str):
     from pprint import pprint
     request = PKNS_Request(address)
     packet = PKNS_Sync()
