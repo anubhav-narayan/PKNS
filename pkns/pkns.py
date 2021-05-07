@@ -15,8 +15,7 @@ from pknscore import (
     PKNS_Query,
     PKNS_Sync,
     parse
-    )
-# from daemonocle import Daemon
+)
 import click
 import datetime
 import os
