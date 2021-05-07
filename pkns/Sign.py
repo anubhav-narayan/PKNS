@@ -1,9 +1,13 @@
-from Crypto import Random
+'''
+Object Transport Signing Meta Class
+Ported from loopyCryptor
+'''
+
 from Crypto.Hash import (
     MD5,
     SHA3_256,
     SHA256
-    )
+)
 
 from Serializer import *
 
@@ -11,6 +15,7 @@ from Serializer import *
 class Sign():
     """
     Signing Meta-Class for Object Signing
+    Signs MD5, SHA256, SHA3_256
     """
 
     def __init__(self):

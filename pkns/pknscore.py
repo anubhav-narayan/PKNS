@@ -2,15 +2,19 @@
 PKNS Core Classes and Funtions
 '''
 
-__version__ = "0.6.5"
+__version__ = "0.7.0"
 __author__ = "Anubhav Mattoo"
+__email__ = "anubhavmattoo@outlook.com"
+__license__ = ""
+__status__ = "Private Beta"
+
 
 from sqlitedict import SqliteDict
 import os
 from Crypto.PublicKey import RSA
 import socket
 import threading
-from Cryptor import Cryptor
+from Cryptor import Sign
 import Serializer
 from hashlib import shake_128
 import datetime
@@ -104,11 +108,13 @@ class PKNS_Table():
             key_public = key.publickey()
             key_file = key_public.export_key()
             master = key.export_key()
-            with open(os.path.abspath(f"./master/{shake_128(peergroup.encode('utf8')+ key_file).hexdigest(8)}_MASTER.pem"),
+            fingerprint = shake_128(peergroup.encode('utf8') + key_file)\
+                .hexdigest(8)
+            with open(os.path.abspath(f"./master/{fingerprint}_MASTER.pem"),
                       'wb') as f:
                 f.write(master)
             import stat
-            os.chmod(os.path.abspath(f"./master/{shake_128(peergroup.encode('utf8')+ key_file).hexdigest(8)}_MASTER.pem"),
+            os.chmod(os.path.abspath(f"./master/{fingerprint}_MASTER.pem"),
                      0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
@@ -223,17 +229,21 @@ class PKNS_Table():
 
 
 class Base_TCP_Bus():
-    """docstring for Base_TCP_Bus"""
+    """
+    Base Class for TCP Busses Used
+    """
     def __init__(self, buffer_size: int = 2048):
         super(Base_TCP_Bus, self).__init__()
         self.buffer_size = buffer_size
-        self._serialize = lambda obj: Serializer.to_byte(obj)
+        self._serialize = lambda obj: Serializer.to_bytes(obj)
         self._deserialize = lambda bytes_: Serializer.to_obj(bytes_)
-        self._build_header = lambda size, md5: self._serialize((size, md5))
+        self._build_header = lambda size, sha256:\
+            self._serialize((size, sha256))
         self._read_header = lambda header: self._deserialize(header)
-        self._build_ack = lambda size, md5: Cryptor.md5((size, md5)).encode()
-        self._verify_ack = lambda ack, size, md5: Cryptor.md5((size, md5))\
-                                                         .encode() == ack
+        self._build_ack = lambda size, sha256:\
+            Sign.sha256((size, sha256)).encode()
+        self._verify_ack = lambda ack, size, sha256:\
+            Sign.sha256((size, sha256)).encode() == ack
 
     # Section From Knight Bus
     def _send_bytes(self, bytes_: bytes):
@@ -287,7 +297,7 @@ class Base_TCP_Bus():
                 bytes_ += buffer
                 if not buffer:
                     break
-            if md5 != Cryptor.md5(bytes_):
+            if md5 != Sign.md5(bytes_):
                 raise ConnectionError("Object md5 unmatched")
             else:
                 obj = self._deserialize(bytes_)
@@ -300,7 +310,7 @@ class Base_TCP_Bus():
 
     def send(self, obj):
         data = self._serialize(obj)
-        self._send_object_header(size=len(data), md5=Cryptor.md5(data))
+        self._send_object_header(size=len(data), md5=Sign.md5(data))
         self._send_bytes(data)
     # END Sections from Knight Bus
 
@@ -330,16 +340,20 @@ class PKNS_Server(Base_TCP_Bus):
     def handler(self, c: socket.socket, a):
         self.socket = c
         pack = self.recv()
-        print(f"[{datetime.datetime.now().isoformat(' ')}] {a[0]}@{a[1]}: {pack['tos']}")
+        print(
+            f"[{datetime.datetime.now().isoformat(' ')}]" +
+            f" {a[0]}@{a[1]}: {pack['tos']}")
         x = PKNS_Response()
-        # query handler
+        # Query Handler
         if pack['tos'] == 'PKNS:QUERY':
             table = PKNS_Table()
             x['reply'] = table.resolve(pack['query'])
+        # Ping Handler
         if pack['tos'] == 'PKNS:PING':
             from daemonocle import Daemon
             x['stats'] = Daemon('PKNS Server',
                                 pidfile='./PKNS.pid').get_status()
+        # Sync Handler
         if pack['tos'] == 'PKNS:SYNC':
             for i in pack['sync']:
                 pack['sync'][i]['address'] = a[0]

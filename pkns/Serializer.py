@@ -1,7 +1,12 @@
+'''
+Object Serialization and Maeshalling Sub-Layer
+Ported from loopyCryptor
+'''
+
 import pickle5 as pickle
 
 
-def to_byte(obj, force_convert: bool = True) -> bytes:
+def to_bytes(obj, force_convert: bool = True) -> bytes:
     '''
     Serialize Object to Bytes
     '''
@@ -26,10 +31,10 @@ def byte_to_str(text: bytes, do_convert=True):
     elif isinstance(text, str):
         return text
     elif isinstance(text, bytes):
-        return text.decode()
+        return text.decode('utf8')
     else:
         raise AttributeError(
-            "Unable to convert {} to string.Text should be string or bytes".format(
+            "Unable to convert {} to string".format(
                 type(text)
             )
         )
