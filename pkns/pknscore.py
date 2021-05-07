@@ -2,15 +2,19 @@
 PKNS Core Classes and Funtions
 '''
 
-__version__ = "0.6.5"
+__version__ = "0.7.0"
 __author__ = "Anubhav Mattoo"
+__email__ = "anubhavmattoo@outlook.com"
+__license__ = ""
+__status__ = "Private Beta"
+
 
 from sqlitedict import SqliteDict
 import os
 from Crypto.PublicKey import RSA
 import socket
 import threading
-from Cryptor import Cryptor
+from Cryptor import Sign
 import Serializer
 from hashlib import shake_128
 import datetime
@@ -90,44 +94,35 @@ class PKNS_Table():
             raise ValueError("Invalid Key")
         self.pkns_table.pop(fingerprint)
 
-    def create_peergroup(self, peergroup: str,
-                         username: str, key_file=None) -> None:
+    def add_peergroup(self, peergroup: str,
+                      username: str, key_file=None) -> None:
         '''
-        Add/Create a Peer Group
+        Add a Peer Group
         '''
         if peergroup in self.peer_table:
             raise NameError(f'{peergroup} already exists!')
         if key_file is not None:
             key_file = open(key_file, 'rb').read()
         else:
-            key = RSA.generate(4096)
+            key = RSA.generate(2048)
             key_public = key.publickey()
             key_file = key_public.export_key()
             master = key.export_key()
-            with open(os.path.abspath(f"./master/{shake_128(peergroup.encode('utf8')+ key_file).hexdigest(8)}_MASTER.pem"),
+            fingerprint = shake_128(peergroup.encode('utf8') + key_file)\
+                .hexdigest(8)
+            with open(os.path.abspath(f"./master/{fingerprint}_MASTER.pem"),
                       'wb') as f:
                 f.write(master)
             import stat
-            os.chmod(os.path.abspath(f"./master/{shake_128(peergroup.encode('utf8')+ key_file).hexdigest(8)}_MASTER.pem"),
+            os.chmod(os.path.abspath(f"./master/{fingerprint}_MASTER.pem"),
                      0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
-                                                     'address': '0.0.0.0'}
+                                                     'address': {'0.0.0.0', }}
         self.peer_group = shake_128(peergroup.encode('utf8')
                                     + key_file).hexdigest(8)
         self.add_user(key_file, username,
                       '0.0.0.0', shake_128(key_file).hexdigest(8))
-
-    def add_peergroup(self, fingerprint: str, name: str, address: str):
-        '''
-        Add Remote Peergroup
-        '''
-        try:
-            # Hex Error Check
-            int(fingerprint, 16)
-        except ValueError:
-            raise
-        self.peer_table[fingerprint] = {'name': name, 'address': address}
 
     def remove_peergroup(self, peergroup: str):
         '''
@@ -222,24 +217,33 @@ class PKNS_Table():
         for x in sync:
             if x in self.peer_table:
                 data = self.peer_table[x]
-                data.update(sync[x])
+                if type(sync[x]['address']) is set:
+                    data['address'].update(sync[x]['address'])
+                else:
+                    data['address'].add(sync[x]['address'])
                 self.peer_table[x] = data
             else:
+                if type(sync[x]['address']) is not set:
+                    sync[x]['address'] = {sync[x]['address'], }
                 self.peer_table[x] = sync[x]
 
 
 class Base_TCP_Bus():
-    """docstring for Base_TCP_Bus"""
+    """
+    Base Class for TCP Busses Used
+    """
     def __init__(self, buffer_size: int = 2048):
         super(Base_TCP_Bus, self).__init__()
         self.buffer_size = buffer_size
-        self._serialize = lambda obj: Serializer.to_byte(obj)
+        self._serialize = lambda obj: Serializer.to_bytes(obj)
         self._deserialize = lambda bytes_: Serializer.to_obj(bytes_)
-        self._build_header = lambda size, md5: self._serialize((size, md5))
+        self._build_header = lambda size, sha256:\
+            self._serialize((size, sha256))
         self._read_header = lambda header: self._deserialize(header)
-        self._build_ack = lambda size, md5: Cryptor.md5((size, md5)).encode()
-        self._verify_ack = lambda ack, size, md5: Cryptor.md5((size, md5))\
-                                                         .encode() == ack
+        self._build_ack = lambda size, sha256:\
+            Sign.sha256((size, sha256)).encode()
+        self._verify_ack = lambda ack, size, sha256:\
+            Sign.sha256((size, sha256)).encode() == ack
 
     # Section From Knight Bus
     def _send_bytes(self, bytes_: bytes):
@@ -293,7 +297,7 @@ class Base_TCP_Bus():
                 bytes_ += buffer
                 if not buffer:
                     break
-            if md5 != Cryptor.md5(bytes_):
+            if md5 != Sign.md5(bytes_):
                 raise ConnectionError("Object md5 unmatched")
             else:
                 obj = self._deserialize(bytes_)
@@ -306,7 +310,7 @@ class Base_TCP_Bus():
 
     def send(self, obj):
         data = self._serialize(obj)
-        self._send_object_header(size=len(data), md5=Cryptor.md5(data))
+        self._send_object_header(size=len(data), md5=Sign.md5(data))
         self._send_bytes(data)
     # END Sections from Knight Bus
 
@@ -336,17 +340,20 @@ class PKNS_Server(Base_TCP_Bus):
     def handler(self, c: socket.socket, a):
         self.socket = c
         pack = self.recv()
-        print(f"[{datetime.datetime.now().isoformat(' ')}] {a[0]}@{a[1]}: {pack['tos']}")
+        print(
+            f"[{datetime.datetime.now().isoformat(' ')}]" +
+            f" {a[0]}@{a[1]}: {pack['tos']}")
         x = PKNS_Response()
-        # query handler
+        # Query Handler
         if pack['tos'] == 'PKNS:QUERY':
             table = PKNS_Table()
             x['reply'] = table.resolve(pack['query'])
+        # Ping Handler
         if pack['tos'] == 'PKNS:PING':
-            # from daemonocle import Daemon
-            # x['stats'] = Daemon('PKNS Server',
-            #                     pidfile='./PKNS.pid').get_status()
-            pass
+            from daemonocle import Daemon
+            x['stats'] = Daemon('PKNS Server',
+                                pidfile='./PKNS.pid').get_status()
+        # Sync Handler
         if pack['tos'] == 'PKNS:SYNC':
             for i in pack['sync']:
                 pack['sync'][i]['address'] = a[0]
@@ -410,7 +417,6 @@ class PKNS_Packet_Base(dict):
     def values(self):
         return self.__dict__.values()
 
-
     def items(self):
         return self.__dict__.items()
 
@@ -470,7 +476,6 @@ class PKNS_Request(Base_TCP_Bus):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.settimeout(30)
         self.socket.connect((self.ip_address, self.port))
-        packet['address'] = self.ip_address, self.port
         self.send(packet)
         response = self.recv()
         self.socket.close()
