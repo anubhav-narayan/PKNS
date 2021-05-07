@@ -243,9 +243,17 @@ def query(obj, address: str):
     from pprint import pprint
     request = PKNS_Request(address)
     packet = PKNS_Sync()
-    packet['sync'] = obj['PKNS'].resolve({'peergroup': '',
-                                          'username': ''})
-    pprint(request.get(packet))
+    try:
+        click.secho(f'Syncing to {address}')
+        packet['sync'] = obj['PKNS'].resolve({'peergroup': '',
+                                              'username': ''})
+        sync = request.get(packet)
+        obj['PKNS'].sync(sync['reply'])
+        pprint(sync)
+        click.secho(f'Synced to {address}', fg='green')
+    except Exception as e:
+        raise
+        click.secho('FAILED', fg='red')
 
 
 if __name__ == '__main__':

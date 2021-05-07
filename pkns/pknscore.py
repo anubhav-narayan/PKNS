@@ -211,7 +211,10 @@ class PKNS_Table():
         for x in sync:
             if x in self.peer_table:
                 data = self.peer_table[x]
-                data['address'].add(sync[x]['address'])
+                if type(sync[x]['address']) is set:
+                    data['address'].update(sync[x]['address'])
+                else:
+                    data['address'].add(sync[x]['address'])
                 self.peer_table[x] = data
             else:
                 if type(sync[x]['address']) is not set:
