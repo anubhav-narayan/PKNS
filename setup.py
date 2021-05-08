@@ -20,5 +20,18 @@ setup(
         'click'
     ],
     license=open('./LICENSE', 'r').read(),
-    long_description=open('./README.md', 'r').read()
+    long_description=open('./README.md', 'r').read(),
+    classifiers=[
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Topic :: Communications',
+        'Topic :: Internet',
+        'Topic :: Security :: Cryptography',
+        'Development Status :: 4 - Beta'
+    ]
 )
