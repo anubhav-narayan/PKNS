@@ -3,7 +3,7 @@
 PKNS CLI
 '''
 
-__version__ = "0.2.0"
+__version__ = "0.2.5"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
 __license__ = ""
@@ -75,6 +75,23 @@ def get_peergroup(obj, name: str):
     pprint(res)
 
 
+@tabman.command('rename-peergroup', short_help='Rename a Peergroup')
+@click.option('-n', '--name', required=True, type=str,
+              help='Fingerprint of the Peergroup')
+@click.option('-r', '--rename', required=True, type=str,
+              help='New Name of the Peergroup')
+@click.pass_obj
+def rename_peergroup(obj, name: str, rename: str):
+    try:
+        click.secho(f'Renaming Peergroup {name} to {rename}...', nl=False)
+        obj['PKNS'].rename_peergroup(name, rename)
+        click.secho('OK', fg='green')
+    except Exception:
+        click.secho('FAILED', fg='red')
+        raise Exception
+    pass
+
+
 @tabman.command('del-peergroup', short_help='Delete/Leave a Peergroup')
 @click.option('-n', '--name', required=True, type=str,
               help='Fingerprint of the Peergroup')
@@ -113,7 +130,7 @@ def add_user(obj, fingerprint: str, peergroup: str, key: os.PathLike,
 
 @tabman.command('get-user', short_help='Get Users\' Info from a Peergroup')
 @click.argument('name', required=True, type=str)
-@click.argument('peergroup', default='DEFAULT')
+@click.argument('peergroup', required=True)
 @click.pass_obj
 def get_user(obj, peergroup: str, name: str):
     from pprint import pprint
@@ -127,13 +144,30 @@ def get_user(obj, peergroup: str, name: str):
     pprint(res)
 
 
+@tabman.command('rename-user', short_help='Remove Users from a Peergroup')
+@click.argument('fingerprint', required=True)
+@click.option('-p', '--peergroup', required=True, help='Peergroup Fingerprint')
+@click.option('-r', '--rename', required=True, help='New Username')
+@click.pass_obj
+def rename_user(obj, fingerprint: str, peergroup: str, rename: str):
+    try:
+        click.secho(f'Renaming {fingerprint} {rename} from {peergroup}...',
+                    nl=False)
+        obj['PKNS'].rename_user(peergroup, fingerprint, rename)
+        click.secho('OK', fg='green')
+    except Exception:
+        click.secho('FAILED', fg='red')
+        raise Exception
+    pass
+
+
 @tabman.command('del-user', short_help='Remove Users from a Peergroup')
 @click.argument('fingerprint', required=True)
-@click.argument('peergroup', default='DEFAULT')
+@click.option('-p', '--peergroup', required=True, help='Peergroup Fingerprint')
 @click.pass_obj
 def del_user(obj, peergroup: str, username: str):
     try:
-        click.secho(f'Removing {username} to {peergroup}...', nl=False)
+        click.secho(f'Removing {username} from {peergroup}...', nl=False)
         obj['PKNS'].purge_user(fingerprint)
         click.secho('OK', fg='green')
     except Exception:
@@ -160,7 +194,10 @@ def server(ctx, host: str, port: int):
 @click.pass_context
 def start(ctx, debug):
     click.secho('PKNS Server Address: ', nl=False)
-    click.secho(f"{ctx.obj['WORKER'].ip_address}", fg='green')
+    click.secho(
+        f"{ctx.obj['WORKER'].ip_address}:{ctx.obj['WORKER'].port}",
+        fg='green'
+    )
     daemon = Daemon('PKNS Server', worker=ctx.obj['WORKER'].serve_endless,
                     detach=(not debug), pidfile=os.path.abspath("./PKNS.pid"),
                     work_dir=os.path.abspath('./'),

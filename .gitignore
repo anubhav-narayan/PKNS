@@ -9,6 +9,5 @@
 *.xlsx
 *.ipynb
 *.png
-PandasGUI.py
-python-bchlib/*
-plots/*
+*.egg-info
+dist*
