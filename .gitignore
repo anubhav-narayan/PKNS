@@ -11,3 +11,5 @@
 *.png
 *.egg-info
 dist*
+build*
+test_cli

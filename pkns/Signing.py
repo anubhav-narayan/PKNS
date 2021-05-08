@@ -5,8 +5,8 @@ Ported from loopyCryptor
 __version__ = "0.2.1"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
-__license__ = ""
-__status__ = "Private Beta"
+__license__ = "AGPLv3"
+__status__ = "Public Beta"
 
 from Crypto.Hash import (
     MD5,
@@ -40,7 +40,7 @@ class Sign():
             for item in obj:
                 md5_.update(to_bytes(item))
         elif len(to_bytes(obj)) > 500:
-            return Sign.md5(cut_bytes(to_bytes(obj), cut_length=500),
+            return Sign.md5(cut_bytes(to_bytes(obj), 500),
                             ret_hex=ret_hex)
         else:
             md5_.update(to_bytes(obj))
@@ -57,7 +57,7 @@ class Sign():
             for item in obj:
                 sha_.update(to_bytes(item))
         elif len(to_bytes(obj)) > 1024:
-            return Sign.sha256(cut_bytes(to_bytes(obj), cut_length=1024),
+            return Sign.sha256(cut_bytes(to_bytes(obj), 1024),
                                ret_hex=ret_hex)
         else:
             sha_.update(to_bytes(obj))
@@ -74,7 +74,7 @@ class Sign():
             for item in obj:
                 sha_.update(to_bytes(item))
         elif len(to_bytes(obj)) > 1024:
-            return Sign.sha3_256(cut_bytes(to_bytes(obj), cut_length=1024),
+            return Sign.sha3_256(cut_bytes(to_bytes(obj), 1024),
                                  ret_hex=ret_hex)
         else:
             sha_.update(to_bytes(obj))
