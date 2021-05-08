@@ -38,7 +38,7 @@ Commands:
   del-peergroup     Delete/Leave a Peergroup
   del-user          Remove Users from a Peergroup
   get-peergroup     Get Info of a Peergroup
-  get-user          Get Users' Info from a Peergroup
+  get-user          Get Users\' Info from a Peergroup
   rename-peergroup  Rename a Peergroup
   rename-user       Rename a User from a Peergroup
 
