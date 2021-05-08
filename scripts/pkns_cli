@@ -199,7 +199,8 @@ def start(ctx, debug):
         fg='green'
     )
     daemon = Daemon('PKNS Server', worker=ctx.obj['WORKER'].serve_endless,
-                    detach=(not debug), pidfile=os.path.abspath("./PKNS.pid"),
+                    detach=(not debug), pidfile=os.path.abspath(
+                        os.environ['HOME']+"/.pkns/PKNS.pid"),
                     work_dir=os.path.abspath('./'),
                     stdout_file=os.path.abspath(
                         os.environ['HOME'] + "/.pkns/PKNS.log"),
@@ -212,14 +213,16 @@ def start(ctx, debug):
 @server.command('stop', short_help='Stop the PKNS Server')
 @click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
 def stop(force):
-    daemon = Daemon('PKNS Server', pidfile=os.path.abspath("./PKNS.pid"))
+    daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
+                        os.environ['HOME']+"/.pkns/PKNS.pid"))
     daemon.stop(force=force)
 
 
 @server.command('status', short_help='PKNS Server Status')
 @click.option('-j', '--json', help='Return JSON', default=False, is_flag=True)
 def status(json):
-    daemon = Daemon('PKNS Server', pidfile=os.path.abspath("./PKNS.pid"))
+    daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
+                        os.environ['HOME']+"/.pkns/PKNS.pid"))
     daemon.status(json=json)
 
 

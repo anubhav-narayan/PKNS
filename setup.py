@@ -14,6 +14,6 @@ setup(
         'sqlitedict',
         'pycryptodome>=3.7'
     ],
-    license='AGPLv3',
-    long_description=open('./LICENSE', 'r').read()
+    license=open('./LICENSE', 'r').read(),
+    long_description=open('./README.md', 'r').read()
 )
