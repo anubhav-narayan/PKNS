@@ -3,11 +3,11 @@
 PKNS CLI
 '''
 
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
 __license__ = "AGPLv3"
-__status__ = "Private Beta"
+__status__ = "Public Beta"
 
 
 from pkns.pknscore import (
@@ -24,17 +24,31 @@ import click
 import datetime
 import os
 
+# Path
+PATH = '.pkns'
+
 
 # CLI Starts Here
 @click.group(help=f'PKNS CLI {__version__}')
 @click.pass_obj
 def cli(obj):
-    obj['PKNS'] = PKNS_Table()
+    obj['PKNS'] = PKNS_Table(PATH)
     pass
 
 
+# Path
+@cli.command('path', short_help='Table Path relative to HOME')
+@click.argument('path', type=click.Path(), default='.pkns')
+def path(path: str):
+    global PATH
+    if not os.path.exists(os.path.join(os.environ['HOME'], path)):
+        os.mkdir(os.path.join(os.environ['HOME'], path))
+    PATH = path
+
+
 # Table Manager
-@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager')
+@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager',
+           autocompletion=get_tabman_commands)
 @click.pass_obj
 def tabman(obj):
     pass
@@ -144,7 +158,7 @@ def get_user(obj, peergroup: str, name: str):
     pprint(res)
 
 
-@tabman.command('rename-user', short_help='Remove Users from a Peergroup')
+@tabman.command('rename-user', short_help='Rename a User from a Peergroup')
 @click.argument('fingerprint', required=True)
 @click.option('-p', '--peergroup', required=True, help='Peergroup Fingerprint')
 @click.option('-r', '--rename', required=True, help='New Username')
@@ -201,7 +215,7 @@ def start(ctx, debug):
     daemon = Daemon('PKNS Server', worker=ctx.obj['WORKER'].serve_endless,
                     detach=(not debug), pidfile=os.path.abspath(
                         os.environ['HOME']+"/.pkns/PKNS.pid"),
-                    work_dir=os.path.abspath('./'),
+                    work_dir=os.path.abspath(os.environ['HOME']),
                     stdout_file=os.path.abspath(
                         os.environ['HOME'] + "/.pkns/PKNS.log"),
                     stderr_file=os.path.abspath(
@@ -301,6 +315,10 @@ def query(obj, address: str):
     except Exception as e:
         raise
         click.secho('FAILED', fg='red')
+
+
+def main():
+    cli(obj={})
 
 
 if __name__ == '__main__':

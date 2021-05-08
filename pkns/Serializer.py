@@ -5,8 +5,8 @@ Ported from loopyCryptor
 __version__ = "0.2.0"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
-__license__ = ""
-__status__ = "Private Beta"
+__license__ = "AGPLv3"
+__status__ = "Public Beta"
 
 import pickle5 as pickle
 
