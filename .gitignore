@@ -13,3 +13,4 @@
 dist*
 build*
 test_cli
+pkns_v/*
