@@ -2,7 +2,7 @@
 PKNS Core Classes and Funtions
 '''
 
-__version__ = "0.7.0"
+__version__ = "0.7.5"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
 __license__ = ""
@@ -43,11 +43,11 @@ class PKNS_Table():
                                      os.environ['HOME']
                                      + '/.pkns/pkns.db'),
                                      autocommit=True, tablename='peergroups')
-        self.peer_group = 'DEFAULT'
         pass
 
     def add_user(self, key: str, username: dict,
-                 address: list, fingerprint: str) -> None:
+                 address: list, fingerprint: str,
+                 peergroup: str) -> None:
         '''
         Add or Update Entry in the Table
         '''
@@ -55,7 +55,7 @@ class PKNS_Table():
                                      os.environ['HOME']
                                      + '/.pkns/pkns.db'),
                                      autocommit=True,
-                                     tablename=self.peer_group)
+                                     tablename=peergroup)
         if fingerprint in self.pkns_table and\
            username != self.pkns_table[fingerprint]['username']:
             raise ValueError("Invalid fingerprint")
@@ -69,7 +69,8 @@ class PKNS_Table():
                     'key': key
                 }
 
-    def add_address(self, fingerprint: str, address: tuple) -> None:
+    def add_address(self, fingerprint: str, address: tuple,
+                    peergroup: str) -> None:
         '''
         Add or Update Addresses in the Table
         '''
@@ -77,10 +78,11 @@ class PKNS_Table():
                                      os.environ['HOME']
                                      + '/.pkns/pkns.db'),
                                      autocommit=True,
-                                     tablename=self.peer_group)
+                                     tablename=peergroup)
         self.pkns_table[fingerprint]['address'].add(address)
 
-    def remove_address(self, fingerprint: str, address: tuple) -> None:
+    def remove_address(self, fingerprint: str, address: tuple,
+                       peergroup: str) -> None:
         '''
         Add or Update Addresses in the Table
         '''
@@ -88,7 +90,7 @@ class PKNS_Table():
                                      os.environ['HOME']
                                      + '/.pkns/pkns.db'),
                                      autocommit=True,
-                                     tablename=self.peer_group)
+                                     tablename=peergroup)
         self.pkns_table[fingerprint]['address'].discard(address)
 
     def purge_user(self, fingerprint: str) -> None:
@@ -99,7 +101,7 @@ class PKNS_Table():
                                      os.environ['HOME']
                                      + '/.pkns/pkns.db'),
                                      autocommit=True,
-                                     tablename=self.peer_group)
+                                     tablename=peergroup)
         if fingerprint not in self.pkns_table:
             raise ValueError("Invalid Key")
         self.pkns_table.pop(fingerprint)
@@ -129,10 +131,10 @@ class PKNS_Table():
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
                                                      'address': {'0.0.0.0', }}
-        self.peer_group = shake_128(peergroup.encode('utf8')
-                                    + key_file).hexdigest(8)
         self.add_user(key_file, username,
-                      '0.0.0.0', shake_128(key_file).hexdigest(8))
+                      '0.0.0.0', shake_128(key_file).hexdigest(8),
+                      shake_128(peergroup.encode('utf8')
+                                + key_file).hexdigest(8))
 
     def remove_peergroup(self, peergroup: str):
         '''
@@ -158,6 +160,17 @@ class PKNS_Table():
         else:
             return {k: v for k, v in self.peer_table.items()
                     if v['name'] == peergroup}
+
+    def rename_peergroup(self, peergroup: str, new_name: str) -> None:
+        '''
+        Peergroup Rename
+        '''
+        if peergroup not in self.peer_table:
+            raise ValueError(
+                f'Peergroup {peergroup} not found')
+        peergroup_ = self.peer_table[peergroup]
+        peergroup_['name'] = new_name
+        self.peer_table[peergroup] = peergroup_
 
     def get_user(self, peergroup: str, username: str, get_key: bool = False):
         '''
@@ -189,8 +202,8 @@ class PKNS_Table():
                 self.pkns_table = SqliteDict(os.path.abspath(
                                      os.environ['HOME']
                                      + '/.pkns/pkns.db'),
-                                             autocommit=True,
-                                             tablename=peergroup)
+                                    autocommit=True,
+                                    tablename=peergroup)
                 if username in self.pkns_table:
                     res = {username: self.pkns_table[peergroup]}
                     res[username].pop('key', None)
@@ -206,6 +219,25 @@ class PKNS_Table():
                     res.update(peergroups[peergroup])
                     fres[peergroup] = res
             return fres
+
+    def rename_user(self, peergroup: str, user: str, new_name: str):
+        '''
+        User Rename
+        '''
+        if peergroup not in self.peer_table:
+            raise ValueError(
+                f'Peergroup {peergroup} not found')
+        self.pkns_table = SqliteDict(os.path.abspath(
+                            os.environ['HOME']
+                            + '/.pkns/pkns.db'),
+                            autocommit=True,
+                            tablename=peergroup)
+        if user not in self.pkns_table:
+            raise ValueError(
+                f'User {user} not found')
+        user_ = self.pkns_table[user]
+        user_['username'] = new_name
+        self.pkns_table[user] = user_
 
     def resolve(self, query: dict) -> dict:
         '''
@@ -492,9 +524,14 @@ class PKNS_Request(Base_TCP_Bus):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.settimeout(30)
-        self.socket.connect((self.ip_address, self.port))
-        self.send(packet)
-        response = self.recv()
+        try:
+            self.socket.connect((self.ip_address, self.port))
+            self.send(packet)
+            response = self.recv()
+        except socket.timeout:
+            raise ConnectionError(
+                'Connection Timeout'
+            )
         self.socket.close()
         return response
 
