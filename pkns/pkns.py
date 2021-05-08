@@ -3,7 +3,7 @@
 PKNS CLI
 '''
 
-__version__ = "0.1.9"
+__version__ = "0.2.0"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
 __license__ = ""
