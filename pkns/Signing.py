@@ -14,7 +14,7 @@ from Crypto.Hash import (
     SHA256
 )
 
-from Serializer import *
+from .Serializer import *
 
 
 class Sign():
