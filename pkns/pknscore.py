@@ -14,8 +14,8 @@ import os
 from Crypto.PublicKey import RSA
 import socket
 import threading
-from Cryptor import Sign
-import Serializer
+from .Signing import Sign
+from .Serializer import *
 from hashlib import shake_128
 import datetime
 
@@ -30,8 +30,8 @@ def get_constants(prefix):
                 if n.startswith(prefix))
 
 
-families = get_constants('AF_')
-protocols = get_constants('IPPROTO_')
+FAMALIES = get_constants('AF_')
+PROTOCOLS = get_constants('IPPROTO_')
 
 
 class PKNS_Table():
@@ -39,7 +39,9 @@ class PKNS_Table():
     Public Key Name System
     """
     def __init__(self):
-        self.peer_table = SqliteDict(os.path.abspath('./pkns.db'),
+        self.peer_table = SqliteDict(os.path.abspath(
+                                     os.environ['HOME']
+                                     + '/.pkns/pkns.db'),
                                      autocommit=True, tablename='peergroups')
         self.peer_group = 'DEFAULT'
         pass
@@ -49,7 +51,9 @@ class PKNS_Table():
         '''
         Add or Update Entry in the Table
         '''
-        self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'),
+        self.pkns_table = SqliteDict(os.path.abspath(
+                                     os.environ['HOME']
+                                     + '/.pkns/pkns.db'),
                                      autocommit=True,
                                      tablename=self.peer_group)
         if fingerprint in self.pkns_table and\
@@ -69,7 +73,9 @@ class PKNS_Table():
         '''
         Add or Update Addresses in the Table
         '''
-        self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'),
+        self.pkns_table = SqliteDict(os.path.abspath(
+                                     os.environ['HOME']
+                                     + '/.pkns/pkns.db'),
                                      autocommit=True,
                                      tablename=self.peer_group)
         self.pkns_table[fingerprint]['address'].add(address)
@@ -78,7 +84,9 @@ class PKNS_Table():
         '''
         Add or Update Addresses in the Table
         '''
-        self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'),
+        self.pkns_table = SqliteDict(os.path.abspath(
+                                     os.environ['HOME']
+                                     + '/.pkns/pkns.db'),
                                      autocommit=True,
                                      tablename=self.peer_group)
         self.pkns_table[fingerprint]['address'].discard(address)
@@ -87,7 +95,9 @@ class PKNS_Table():
         '''
         Purge from Table
         '''
-        self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'),
+        self.pkns_table = SqliteDict(os.path.abspath(
+                                     os.environ['HOME']
+                                     + '/.pkns/pkns.db'),
                                      autocommit=True,
                                      tablename=self.peer_group)
         if fingerprint not in self.pkns_table:
@@ -110,12 +120,12 @@ class PKNS_Table():
             master = key.export_key()
             fingerprint = shake_128(peergroup.encode('utf8') + key_file)\
                 .hexdigest(8)
-            with open(os.path.abspath(f"./master/{fingerprint}_MASTER.pem"),
-                      'wb') as f:
+            with open(os.path.abspath(os.environ['HOME']
+                      + f"/.pkns/master/{fingerprint}_MASTER.pem"), 'wb') as f:
                 f.write(master)
             import stat
-            os.chmod(os.path.abspath(f"./master/{fingerprint}_MASTER.pem"),
-                     0o600)
+            os.chmod(os.path.abspath(os.environ['HOME']
+                     + f"/.pkns/master/{fingerprint}_MASTER.pem"), 0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
                                                      'address': {'0.0.0.0', }}
@@ -130,8 +140,10 @@ class PKNS_Table():
         '''
         try:
             self.peer_table.pop(peergroup)
-            self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'),
-                                         autocommit=True, tablename=peergroup)
+            self.pkns_table = SqliteDict(os.path.abspath(
+                                    os.environ['HOME']
+                                    + '/.pkns/pkns.db'),
+                                    autocommit=True, tablename=peergroup)
             self.pkns_table.clear()
             del self.pkns_table
         except KeyError:
@@ -152,7 +164,9 @@ class PKNS_Table():
         User Query
         '''
         if peergroup in self.peer_table:
-            self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'),
+            self.pkns_table = SqliteDict(os.path.abspath(
+                                     os.environ['HOME']
+                                     + '/.pkns/pkns.db'),
                                          autocommit=True, tablename=peergroup)
             if username in self.pkns_table:
                 res = {username: self.pkns_table[username]}
@@ -172,7 +186,9 @@ class PKNS_Table():
             peergroups = self.get_peergroup(peergroup)
             fres = {}
             for peergroup in peergroups:
-                self.pkns_table = SqliteDict(os.path.abspath('./pkns.db'),
+                self.pkns_table = SqliteDict(os.path.abspath(
+                                     os.environ['HOME']
+                                     + '/.pkns/pkns.db'),
                                              autocommit=True,
                                              tablename=peergroup)
                 if username in self.pkns_table:
@@ -235,8 +251,8 @@ class Base_TCP_Bus():
     def __init__(self, buffer_size: int = 2048):
         super(Base_TCP_Bus, self).__init__()
         self.buffer_size = buffer_size
-        self._serialize = lambda obj: Serializer.to_bytes(obj)
-        self._deserialize = lambda bytes_: Serializer.to_obj(bytes_)
+        self._serialize = lambda obj: to_bytes(obj)
+        self._deserialize = lambda bytes_: to_obj(bytes_)
         self._build_header = lambda size, sha256:\
             self._serialize((size, sha256))
         self._read_header = lambda header: self._deserialize(header)
@@ -363,11 +379,12 @@ class PKNS_Server(Base_TCP_Bus):
                 x['reply'] = table.resolve({'peergroup': '', 'username': ''})
             except Exception:
                 x['reply'] = 'FAILED'
+        # Handler General
         x['status'] = 'WORKING'
         x['server'] = socket.gethostbyaddr(self.socket.getsockname()[0])
         x['client'] = a
-        x['uproto'] = protocols[c.proto]
-        x['transport'] = families[c.family]
+        x['protocol'] = PROTOCOLS[c.proto]
+        x['transport'] = FAMALIES[c.family]
         self.send(x)
         self.socket.close()
 
