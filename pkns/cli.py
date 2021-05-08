@@ -47,8 +47,7 @@ def path(path: str):
 
 
 # Table Manager
-@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager',
-           autocompletion=get_tabman_commands)
+@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager')
 @click.pass_obj
 def tabman(obj):
     pass
