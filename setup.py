@@ -8,11 +8,11 @@ setup(
     author='Anubhav Mattoo',
     author_email='anubhavmattoo@outlook.com',
     packages=['pkns'],
-    scripts=['pkns_cli'],
+    scripts=['scripts/pkns_cli'],
     install_requires=[
         'daemonocle',
         'sqlitedict',
-        'pycrptodome>=3.7'
+        'pycryptodome>=3.7'
     ],
     license='AGPLv3',
     long_description=open('./LICENSE', 'r').read()
