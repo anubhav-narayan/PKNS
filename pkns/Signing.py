@@ -1,16 +1,26 @@
-from Crypto import Random
+'''
+Object Transport Signing Meta Class
+Ported from loopyCryptor
+'''
+__version__ = "0.2.1"
+__author__ = "Anubhav Mattoo"
+__email__ = "anubhavmattoo@outlook.com"
+__license__ = ""
+__status__ = "Private Beta"
+
 from Crypto.Hash import (
     MD5,
     SHA3_256,
     SHA256
-    )
+)
 
-from Serializer import *
+from .Serializer import *
 
 
 class Sign():
     """
     Signing Meta-Class for Object Signing
+    Signs MD5, SHA256, SHA3_256
     """
 
     def __init__(self):
