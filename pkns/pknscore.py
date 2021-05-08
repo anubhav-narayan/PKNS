@@ -5,7 +5,7 @@ PKNS Core Classes and Funtions
 __version__ = "0.7.5"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
-__license__ = ""
+__license__ = "AGPLv3"
 __status__ = "Private Beta"
 
 
