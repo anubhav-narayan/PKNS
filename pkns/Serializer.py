@@ -1,5 +1,5 @@
 '''
-Object Serialization and Maeshalling Sub-Layer
+Object Serialization and Marshalling Sub-Layer
 Ported from loopyCryptor
 '''
 __version__ = "0.2.0"

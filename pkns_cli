@@ -197,7 +197,7 @@ def restart(ctx, debug, force):
 
 
 # Ping
-@cli.command('ping')
+@cli.command('ping', short_help='PKNS Server Ping', help='PKNS Ping')
 @click.argument('address', default='0.0.0.0')
 @click.option('-n', '--nop', help='Number of Pings to send', type=int,
               default=1)
@@ -216,7 +216,7 @@ def ping(address, nop: int):
 
 
 # Query
-@cli.command('query')
+@cli.command('query', short_help='PKNS Query', help='PKNS Query')
 @click.argument('query', type=str)
 @click.pass_obj
 def query(obj, query: str):
@@ -242,7 +242,8 @@ def query(obj, query: str):
 
 
 # Sync
-@cli.command('sync')
+@cli.command('sync', short_help='Remote Server Synchronisation',
+             help='PKNS Sync')
 @click.argument('address', default='0.0.0.0')
 @click.pass_obj
 def query(obj, address: str):
