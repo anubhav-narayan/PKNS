@@ -3,7 +3,7 @@ Object Serialization and Maeshalling Sub-Layer
 Ported from loopyCryptor
 '''
 
-import pickle5 as pickle
+import dill as pickle
 
 
 def to_bytes(obj, force_convert: bool = True) -> bytes:

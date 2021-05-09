@@ -2,7 +2,7 @@
 Windows Service Class for PKNS
 '''
 
-__version__ = "0.0.1-Windows"
+__version__ = "0.0.10-Windows"
 __author__ = "Om Belote"
 __credits__ = ['Anubhav Mattoo']
 
@@ -25,7 +25,7 @@ class Service_Base(win32serviceutil.ServiceFramework):
 
     def SvcStop(self):
         '''
-        Stop windows service
+        Stop Windows Service
         '''
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         win32event.SetEvent(self.wait)
@@ -34,6 +34,7 @@ class Service_Base(win32serviceutil.ServiceFramework):
         '''
         Start Windows Service
         '''
+        self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE,
                               servicemanager.PYS_SERVICE_STARTED,
                               (self._svc_name_, ""))
@@ -42,6 +43,6 @@ class Service_Base(win32serviceutil.ServiceFramework):
     @classmethod
     def cmd_line_parser(cls):
         '''
-        Command line parser
+        Command Line Parser
         '''
         win32serviceutil.HandleCommandLine(cls)
