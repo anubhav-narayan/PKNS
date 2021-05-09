@@ -12,4 +12,5 @@
 *.egg-info
 dist*
 build*
-pkns_cli
+pkns_*
+.vscode

@@ -126,11 +126,11 @@ class PKNS_Table():
             fingerprint = shake_128(peergroup.encode('utf8') + key_file)\
                 .hexdigest(8)
             with open(os.path.join(os.environ['USERPROFILE'],
-                      f"{self.path}/master/{fingerprint}_MASTER.pem"), 'wb') as f:
+                      f"{self.path}", 'master', f"{fingerprint}_MASTER.pem"), 'wb') as f:
                 f.write(master)
             import stat
             os.chmod(os.path.join(os.environ['USERPROFILE'],
-                     f"{self.path}/master/{fingerprint}_MASTER.pem"), 0o600)
+                     f"{self.path}", 'master', f"{fingerprint}_MASTER.pem"), 0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
                                                      'address': {'0.0.0.0', }}
@@ -380,6 +380,8 @@ class PKNS_Server(Base_TCP_Bus):
     def serve_endless(self):
         self.pool_sock.bind((self.ip_address, self.port))
         self.pool_sock.listen()
+        self.pool_sock.setblocking(0)
+        self.pool_sock.settimeout(5)
         while True:
             try:
                 c, a = self.pool_sock.accept()
@@ -389,6 +391,7 @@ class PKNS_Server(Base_TCP_Bus):
             except KeyboardInterrupt:
                 self.pool_sock.close()
                 break
+                raise
 
     def handler(self, c: socket.socket, a):
         self.socket = c
