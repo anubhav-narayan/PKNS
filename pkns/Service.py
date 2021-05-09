@@ -14,7 +14,7 @@ from win32.lib import win32serviceutil
 
 class Service_Base(win32serviceutil.ServiceFramework):
     """
-    Windows 32 service API
+    Windows 32 Service API
     """
     def __init__(self, name, worker, description):
         self._svc_name_ = name
