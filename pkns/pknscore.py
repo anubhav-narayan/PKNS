@@ -40,10 +40,10 @@ class PKNS_Table():
     """
     def __init__(self, path: str = '.pkns'):
         self.path = path
-        if not os.path.exists(os.path.join(os.environ['HOME'], self.path)):
-            os.mkdir(os.path.join(os.environ['HOME'], self.path))
+        if not os.path.exists(os.path.join(os.environ['USERPROFILE'], self.path)):
+            os.mkdir(os.path.join(os.environ['USERPROFILE'], self.path))
         self.peer_table = SqliteDict(os.path.join(
-                                     os.environ['HOME'],
+                                     os.environ['USERPROFILE'],
                                      path, 'pkns.db'),
                                      autocommit=True, tablename='peergroups')
         pass
@@ -55,7 +55,7 @@ class PKNS_Table():
         Add or Update Entry in the Table
         '''
         self.pkns_table = SqliteDict(os.path.join(
-                                     os.environ['HOME'],
+                                     os.environ['USERPROFILE'],
                                      self.path, 'pkns.db'),
                                      autocommit=True,
                                      tablename=peergroup)
@@ -78,7 +78,7 @@ class PKNS_Table():
         Add or Update Addresses in the Table
         '''
         self.pkns_table = SqliteDict(os.path.join(
-                                     os.environ['HOME'],
+                                     os.environ['USERPROFILE'],
                                      self.path, 'pkns.db'),
                                      autocommit=True,
                                      tablename=peergroup)
@@ -90,7 +90,7 @@ class PKNS_Table():
         Add or Update Addresses in the Table
         '''
         self.pkns_table = SqliteDict(os.path.join(
-                                     os.environ['HOME'],
+                                     os.environ['USERPROFILE'],
                                      self.path, 'pkns.db'),
                                      autocommit=True,
                                      tablename=peergroup)
@@ -101,7 +101,7 @@ class PKNS_Table():
         Purge from Table
         '''
         self.pkns_table = SqliteDict(os.path.join(
-                                     os.environ['HOME'],
+                                     os.environ['USERPROFILE'],
                                      self.path, 'pkns.db'),
                                      autocommit=True,
                                      tablename=peergroup)
@@ -125,11 +125,11 @@ class PKNS_Table():
             master = key.export_key()
             fingerprint = shake_128(peergroup.encode('utf8') + key_file)\
                 .hexdigest(8)
-            with open(os.path.join(os.environ['HOME'],
+            with open(os.path.join(os.environ['USERPROFILE'],
                       f"{self.path}/master/{fingerprint}_MASTER.pem"), 'wb') as f:
                 f.write(master)
             import stat
-            os.chmod(os.path.join(os.environ['HOME'],
+            os.chmod(os.path.join(os.environ['USERPROFILE'],
                      f"{self.path}/master/{fingerprint}_MASTER.pem"), 0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
@@ -146,7 +146,7 @@ class PKNS_Table():
         try:
             self.peer_table.pop(peergroup)
             self.pkns_table = SqliteDict(os.path.join(
-                                    os.environ['HOME'],
+                                    os.environ['USERPROFILE'],
                                     self.path, 'pkns.db'),
                                     autocommit=True, tablename=peergroup)
             self.pkns_table.clear()
@@ -181,7 +181,7 @@ class PKNS_Table():
         '''
         if peergroup in self.peer_table:
             self.pkns_table = SqliteDict(os.path.join(
-                                     os.environ['HOME'],
+                                     os.environ['USERPROFILE'],
                                      self.path, 'pkns.db'),
                                          autocommit=True, tablename=peergroup)
             if username in self.pkns_table:
@@ -203,7 +203,7 @@ class PKNS_Table():
             fres = {}
             for peergroup in peergroups:
                 self.pkns_table = SqliteDict(os.path.join(
-                                     os.environ['HOME'],
+                                     os.environ['USERPROFILE'],
                                      self.path, 'pkns.db'),
                                     autocommit=True,
                                     tablename=peergroup)
@@ -231,7 +231,7 @@ class PKNS_Table():
             raise ValueError(
                 f'Peergroup {peergroup} not found')
         self.pkns_table = SqliteDict(os.path.join(
-                                    os.environ['HOME'],
+                                    os.environ['USERPROFILE'],
                                     self.path, 'pkns.db'),
                                     autocommit=True,
                                     tablename=peergroup)
@@ -403,11 +403,12 @@ class PKNS_Server(Base_TCP_Bus):
             x['reply'] = table.resolve(pack['query'])
         # Ping Handler
         if pack['tos'] == 'PKNS:PING':
-            from daemonocle import Daemon
-            x['stats'] = Daemon('PKNS Server',
-                                pidfile=os.path.join(
-                                    os.environ['HOME'],
-                                    self.pkns_path, 'PKNS.pid')).get_status()
+            # from daemonocle import Daemon
+            # x['stats'] = Daemon('PKNS Server',
+            #                     pidfile=os.path.join(
+            #                         os.environ['USERPROFILE'],
+            #                         self.pkns_path, 'PKNS.pid')).get_status()
+            pass
         # Sync Handler
         if pack['tos'] == 'PKNS:SYNC':
             for i in pack['sync']:

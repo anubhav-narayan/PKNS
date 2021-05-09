@@ -17,7 +17,8 @@ setup(
         'pywin32',
         'sqlitedict',
         'pycryptodome>=3.7',
-        'click'
+        'click',
+        'dill'
     ],
     license=open('./LICENSE', 'r').read(),
     long_description=open('./README.md', 'r').read(),

@@ -3,11 +3,14 @@
 PKNS CLI
 '''
 
-__version__ = "0.1.4-Windows"
-__author__ = "Anubhav Mattoo, Om Belote"
+__version__ = "0.3.0-Windows"
+__author__ = "Anubhav Mattoo"
+__email__ = "anubhavmattoo@outlook.com"
+__license__ = "AGPLv3"
+__status__ = "Public Beta"
 
 
-from pknscore import (
+from pkns.pknscore import (
     PKNS_Table,
     PKNS_Server,
     PKNS_Request,
@@ -20,13 +23,26 @@ import click
 import datetime
 import os
 
+# Path
+PATH = '.pkns'
+
 
 # CLI Starts Here
 @click.group(help=f'PKNS CLI {__version__}')
 @click.pass_obj
 def cli(obj):
-    obj['PKNS'] = PKNS_Table()
+    obj['PKNS'] = PKNS_Table(PATH)
     pass
+
+
+# Path
+@cli.command('path', short_help='Table Path relative to HOME')
+@click.argument('path', type=click.Path(), default='.pkns')
+def path(path: str):
+    global PATH
+    if not os.path.exists(os.path.join(os.environ['HOME'], path)):
+        os.mkdir(os.path.join(os.environ['HOME'], path))
+    PATH = path
 
 
 # Table Manager
@@ -71,6 +87,23 @@ def get_peergroup(obj, name: str):
     pprint(res)
 
 
+@tabman.command('rename-peergroup', short_help='Rename a Peergroup')
+@click.option('-n', '--name', required=True, type=str,
+              help='Fingerprint of the Peergroup')
+@click.option('-r', '--rename', required=True, type=str,
+              help='New Name of the Peergroup')
+@click.pass_obj
+def rename_peergroup(obj, name: str, rename: str):
+    try:
+        click.secho(f'Renaming Peergroup {name} to {rename}...', nl=False)
+        obj['PKNS'].rename_peergroup(name, rename)
+        click.secho('OK', fg='green')
+    except Exception:
+        click.secho('FAILED', fg='red')
+        raise Exception
+    pass
+
+
 @tabman.command('del-peergroup', short_help='Delete/Leave a Peergroup')
 @click.option('-n', '--name', required=True, type=str,
               help='Fingerprint of the Peergroup')
@@ -109,7 +142,7 @@ def add_user(obj, fingerprint: str, peergroup: str, key: os.PathLike,
 
 @tabman.command('get-user', short_help='Get Users\' Info from a Peergroup')
 @click.argument('name', required=True, type=str)
-@click.argument('peergroup', default='DEFAULT')
+@click.argument('peergroup', required=True)
 @click.pass_obj
 def get_user(obj, peergroup: str, name: str):
     from pprint import pprint
@@ -123,13 +156,30 @@ def get_user(obj, peergroup: str, name: str):
     pprint(res)
 
 
+@tabman.command('rename-user', short_help='Rename a User from a Peergroup')
+@click.argument('fingerprint', required=True)
+@click.option('-p', '--peergroup', required=True, help='Peergroup Fingerprint')
+@click.option('-r', '--rename', required=True, help='New Username')
+@click.pass_obj
+def rename_user(obj, fingerprint: str, peergroup: str, rename: str):
+    try:
+        click.secho(f'Renaming {fingerprint} {rename} from {peergroup}...',
+                    nl=False)
+        obj['PKNS'].rename_user(peergroup, fingerprint, rename)
+        click.secho('OK', fg='green')
+    except Exception:
+        click.secho('FAILED', fg='red')
+        raise Exception
+    pass
+
+
 @tabman.command('del-user', short_help='Remove Users from a Peergroup')
 @click.argument('fingerprint', required=True)
-@click.argument('peergroup', default='DEFAULT')
+@click.option('-p', '--peergroup', required=True, help='Peergroup Fingerprint')
 @click.pass_obj
 def del_user(obj, peergroup: str, username: str):
     try:
-        click.secho(f'Removing {username} to {peergroup}...', nl=False)
+        click.secho(f'Removing {username} from {peergroup}...', nl=False)
         obj['PKNS'].purge_user(fingerprint)
         click.secho('OK', fg='green')
     except Exception:
@@ -147,8 +197,16 @@ def del_user(obj, peergroup: str, username: str):
               show_default=True)
 @click.pass_context
 def server(ctx, host: str, port: int):
-    ctx.obj['WORKER'] = PKNS_Server()
+    ctx.obj['WORKER'] = PKNS_Server(host, port)
+    # from pkns.Service import Service_Base
+    # service = Service_Base('PKNS Server', server.serve_endless, 'PKNS Server')
+    # ctx.obj['SERV'] = service
 
+
+# @server.command('install', short_help='Install Service')
+# @click.pass_context
+# def install(ctx):
+#     ctx.obj['SERV'].cmd_line_parser()
 
 @server.command('start', short_help='Start the PKNS Server')
 @click.option('--debug', type=bool, default=False, is_flag=True,
@@ -156,27 +214,36 @@ def server(ctx, host: str, port: int):
 @click.pass_context
 def start(ctx, debug):
     click.secho('PKNS Server Address: ', nl=False)
-    click.secho(f"{ctx.obj['WORKER'].ip_address}", fg='green')
-    ctx.obj['WORKER'].serve_endless()
+    click.secho(
+        f"{ctx.obj['WORKER'].ip_address}:{ctx.obj['WORKER'].port}",
+        fg='green'
+    )
     # daemon = Daemon('PKNS Server', worker=ctx.obj['WORKER'].serve_endless,
-    #                 detach=(not debug), pidfile="./PKNS.pid",
-    #                 work_dir='./',
-    #                 stdout_file="./PKNS.log", stderr_file="./PKNS_error.log",
+    #                 detach=(not debug), pidfile=os.path.abspath(
+    #                     os.environ['HOME']+"/.pkns/PKNS.pid"),
+    #                 work_dir=os.path.abspath(os.environ['HOME']),
+    #                 stdout_file=os.path.abspath(
+    #                     os.environ['HOME'] + "/.pkns/PKNS.log"),
+    #                 stderr_file=os.path.abspath(
+    #                     os.environ['HOME'] + "/.pkns/PKNS_error.log"),
     #                 uid=os.getuid(), gid=os.getgid())
     # daemon.do_action('start')
+    ctx.obj['WORKER'].serve_endless()
 
 
 # @server.command('stop', short_help='Stop the PKNS Server')
 # @click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
 # def stop(force):
-    # daemon = Daemon('PKNS Server', pidfile="./PKNS.pid")
-    # daemon.stop(force=force)
+#     daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
+#                         os.environ['HOME']+"/.pkns/PKNS.pid"))
+#     daemon.stop(force=force)
 
 
 # @server.command('status', short_help='PKNS Server Status')
 # @click.option('-j', '--json', help='Return JSON', default=False, is_flag=True)
 # def status(json):
-#     daemon = Daemon('PKNS Server', pidfile="./PKNS.pid")
+#     daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
+#                         os.environ['HOME']+"/.pkns/PKNS.pid"))
 #     daemon.status(json=json)
 
 
@@ -191,7 +258,7 @@ def start(ctx, debug):
 
 
 # Ping
-@cli.command('ping')
+@cli.command('ping', short_help='PKNS Server Ping', help='PKNS Ping')
 @click.argument('address', default='0.0.0.0')
 @click.option('-n', '--nop', help='Number of Pings to send', type=int,
               default=1)
@@ -210,7 +277,7 @@ def ping(address, nop: int):
 
 
 # Query
-@cli.command('query')
+@cli.command('query', short_help='PKNS Query', help='PKNS Query')
 @click.argument('query', type=str)
 @click.pass_obj
 def query(obj, query: str):
@@ -236,16 +303,29 @@ def query(obj, query: str):
 
 
 # Sync
-@cli.command('sync')
+@cli.command('sync', short_help='Remote Server Synchronisation',
+             help='PKNS Sync')
 @click.argument('address', default='0.0.0.0')
 @click.pass_obj
-def sync(obj, address: str):
+def query(obj, address: str):
     from pprint import pprint
     request = PKNS_Request(address)
     packet = PKNS_Sync()
-    packet['sync'] = obj['PKNS'].resolve({'peergroup': '',
-                                          'username': ''})
-    pprint(request.get(packet))
+    try:
+        click.secho(f'Syncing to {address}')
+        packet['sync'] = obj['PKNS'].resolve({'peergroup': '',
+                                              'username': ''})
+        sync = request.get(packet)
+        obj['PKNS'].sync(sync['reply'])
+        pprint(sync)
+        click.secho(f'Synced to {address}', fg='green')
+    except Exception as e:
+        raise
+        click.secho('FAILED', fg='red')
+
+
+def main():
+    cli(obj={})
 
 
 if __name__ == '__main__':

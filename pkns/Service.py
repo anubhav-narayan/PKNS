@@ -16,11 +16,12 @@ class Service_Base(win32serviceutil.ServiceFramework):
     """
     Windows 32 Service API
     """
+    _svc_name_ = 'pkns_server'
+    _svc_display_name_ = 'PKNS Server'
+    _svc_description_ = 'PKNS Service'
     def __init__(self, name, worker, description):
-        self._svc_name_ = name
-        self._svc_display_name_ = name
-        self._svc_description_ = description
-        self.target = target
+        self.__name__ = name
+        self.target = worker
         self.wait = win32event.CreateEvent(None, 0, 0, None)
 
     def SvcStop(self):
@@ -34,11 +35,11 @@ class Service_Base(win32serviceutil.ServiceFramework):
         '''
         Start Windows Service
         '''
-        self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE,
                               servicemanager.PYS_SERVICE_STARTED,
                               (self._svc_name_, ""))
         self.target()
+        self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 
     @classmethod
     def cmd_line_parser(cls):

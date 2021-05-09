@@ -3,7 +3,7 @@
 PKNS CLI
 '''
 
-__version__ = "0.3.0"
+__version__ = "0.3.0-Windows"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
 __license__ = "AGPLv3"
@@ -41,8 +41,8 @@ def cli(obj):
 @click.argument('path', type=click.Path(), default='.pkns')
 def path(path: str):
     global PATH
-    if not os.path.exists(os.path.join(os.environ['HOME'], path)):
-        os.mkdir(os.path.join(os.environ['HOME'], path))
+    if not os.path.exists(os.path.join(os.environ['USERPROFILE'], path)):
+        os.mkdir(os.path.join(os.environ['USERPROFILE'], path))
     PATH = path
 
 
@@ -198,55 +198,59 @@ def del_user(obj, peergroup: str, username: str):
               show_default=True)
 @click.pass_context
 def server(ctx, host: str, port: int):
-    ctx.obj['WORKER'] = PKNS_Server()
+    # ctx.obj['WORKER'] = PKNS_Server()
+    from Server import Service_Base
+    server = PKNS_Server(host, port)
+    service = Service_Base('PKNS Server', server.serve_endless, 'PKNS Server')
+    service.cmd_line_parser()
 
 
-@server.command('start', short_help='Start the PKNS Server')
-@click.option('--debug', type=bool, default=False, is_flag=True,
-              help='Enable Debug Info')
-@click.pass_context
-def start(ctx, debug):
-    click.secho('PKNS Server Address: ', nl=False)
-    click.secho(
-        f"{ctx.obj['WORKER'].ip_address}:{ctx.obj['WORKER'].port}",
-        fg='green'
-    )
-    daemon = Daemon('PKNS Server', worker=ctx.obj['WORKER'].serve_endless,
-                    detach=(not debug), pidfile=os.path.abspath(
-                        os.environ['HOME']+"/.pkns/PKNS.pid"),
-                    work_dir=os.path.abspath(os.environ['HOME']),
-                    stdout_file=os.path.abspath(
-                        os.environ['HOME'] + "/.pkns/PKNS.log"),
-                    stderr_file=os.path.abspath(
-                        os.environ['HOME'] + "/.pkns/PKNS_error.log"),
-                    uid=os.getuid(), gid=os.getgid())
-    daemon.do_action('start')
+# @server.command('start', short_help='Start the PKNS Server')
+# @click.option('--debug', type=bool, default=False, is_flag=True,
+#               help='Enable Debug Info')
+# @click.pass_context
+# def start(ctx, debug):
+#     click.secho('PKNS Server Address: ', nl=False)
+#     click.secho(
+#         f"{ctx.obj['WORKER'].ip_address}:{ctx.obj['WORKER'].port}",
+#         fg='green'
+#     )
+#     daemon = Daemon('PKNS Server', worker=ctx.obj['WORKER'].serve_endless,
+#                     detach=(not debug), pidfile=os.path.abspath(
+#                         os.environ['USERPROFILE']+"/.pkns/PKNS.pid"),
+#                     work_dir=os.path.abspath(os.environ['USERPROFILE']),
+#                     stdout_file=os.path.abspath(
+#                         os.environ['USERPROFILE'] + "/.pkns/PKNS.log"),
+#                     stderr_file=os.path.abspath(
+#                         os.environ['USERPROFILE'] + "/.pkns/PKNS_error.log"),
+#                     uid=os.getuid(), gid=os.getgid())
+#     daemon.do_action('start')
 
 
-@server.command('stop', short_help='Stop the PKNS Server')
-@click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
-def stop(force):
-    daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
-                        os.environ['HOME']+"/.pkns/PKNS.pid"))
-    daemon.stop(force=force)
+# @server.command('stop', short_help='Stop the PKNS Server')
+# @click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
+# def stop(force):
+#     daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
+#                         os.environ['USERPROFILE']+"/.pkns/PKNS.pid"))
+#     daemon.stop(force=force)
 
 
-@server.command('status', short_help='PKNS Server Status')
-@click.option('-j', '--json', help='Return JSON', default=False, is_flag=True)
-def status(json):
-    daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
-                        os.environ['HOME']+"/.pkns/PKNS.pid"))
-    daemon.status(json=json)
+# @server.command('status', short_help='PKNS Server Status')
+# @click.option('-j', '--json', help='Return JSON', default=False, is_flag=True)
+# def status(json):
+#     daemon = Daemon('PKNS Server', pidfile=os.path.abspath(
+#                         os.environ['USERPROFILE']+"/.pkns/PKNS.pid"))
+#     daemon.status(json=json)
 
 
-@server.command('restart', short_help='Restart PKNS Server')
-@click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
-@click.option('--debug', type=bool, default=False, is_flag=True,
-              help='Enable Debug Info')
-@click.pass_context
-def restart(ctx, debug, force):
-    ctx.invoke(stop, force=force)
-    ctx.invoke(start, debug=debug)
+# @server.command('restart', short_help='Restart PKNS Server')
+# @click.option('-f', '--force', help='Force Stop', is_flag=True, default=False)
+# @click.option('--debug', type=bool, default=False, is_flag=True,
+#               help='Enable Debug Info')
+# @click.pass_context
+# def restart(ctx, debug, force):
+#     ctx.invoke(stop, force=force)
+#     ctx.invoke(start, debug=debug)
 
 
 # Ping
