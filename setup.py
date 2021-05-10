@@ -3,17 +3,9 @@ from setuptools.command.install import install
 import os
 
 
-def post_install():
-    print('Creating Directories', end='...')
-    if not os.path.exists(os.environ['HOME'] + '/.pkns'):
-        os.mkdir(os.path.abspath(os.environ['HOME'] + '/.pkns'))
-    print('OK!')
-    print('You are Good To Go!')
-
-
 setup(
     name='pkns',
-    version='0.4.0',
+    version='0.5.7',
     description='PKNS Framework and CLI',
     author='Anubhav Mattoo',
     author_email='anubhavmattoo@outlook.com',
@@ -28,8 +20,18 @@ setup(
         'click'
     ],
     license=open('./LICENSE', 'r').read(),
-    long_description=open('./README.md', 'r').read()
+    long_description=open('./README.md', 'r').read(),
+    classifiers=[
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Topic :: Communications',
+        'Topic :: Internet',
+        'Topic :: Security :: Cryptography',
+        'Development Status :: 4 - Beta'
+    ]
 )
-
-# Forece Post Install
-post_install()
