@@ -25,7 +25,7 @@ class Sign():
 
     def __init__(self):
         '''
-        DO NOT Init a Class
+        DO NOT Init this Class
         '''
         raise AttributeError("DO NOT INIT, CYKA!")
 
