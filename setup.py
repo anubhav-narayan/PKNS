@@ -5,7 +5,7 @@ import os
 
 setup(
     name='pkns',
-    version='0.5.2',
+    version='0.5.7',
     description='PKNS Framework and CLI',
     author='Anubhav Mattoo',
     author_email='anubhavmattoo@outlook.com',
