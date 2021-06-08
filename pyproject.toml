@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pkns"
-version = "0.5.7"
+version = "0.5.8"
 description = "Public Key Name System Framework"
 authors = ["Anubhav Mattoo <anubhavmattoo@outlook.com>"]
 license = "AGPLv3"

@@ -47,8 +47,7 @@ def path(path: str):
 
 
 # Table Manager
-@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager',
-           autocompletion=get_tabman_commands)
+@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager')
 @click.pass_obj
 def tabman(obj):
     pass
@@ -60,17 +59,24 @@ def tabman(obj):
 @click.option('-u', '--username', required=False, type=str,
               help='Your Peergroup Username', default='master',
               show_default=True)
-@click.option('-k', '--key-file', required=False, type=click.Path(),
+@click.option('-k', '--key-file', required=False, type=click.File(),
               help='Explicit Keys for the Peergroup', default=None)
+@click.option('-o', '--out-path', type=click.Path(),
+              default=os.path.abspath('./'))
 @click.pass_obj
-def add_peergroup(obj, username, name, key_file):
+def add_peergroup(obj, username, name, key_file, out_path):
     try:
         click.secho(f'Adding Peergroup {name}...', nl=False)
-        obj['PKNS'].add_peergroup(name, username, key_file)
+        key = obj['PKNS'].add_peergroup(name, username, key_file,
+                                        rsa_size=4096, get_master=True)
+        click.secho('OK', fg='green')
+        click.secho(f'Writing Master Key at {out_path}...', nl=False)
+        with open(os.path.join(out_path, username+'.pem')) as f:
+            f.write(key)
         click.secho('OK', fg='green')
     except Exception as fail:
         click.secho('FAILED', fg='red')
-        raise fail
+        raise click.ClickException(fail)
     pass
 
 
@@ -85,7 +91,7 @@ def get_peergroup(obj, name: str):
         click.secho('FOUND', fg='green')
     except Exception as fail:
         click.secho('FAILED', fg='red')
-        raise fail
+        raise click.ClickException(fail)
     pprint(res)
 
 
@@ -123,7 +129,7 @@ def del_peergroup(obj, name: str):
 
 @tabman.command('add-user', short_help='Add Users to a Peergroup')
 @click.argument('peergroup', default='DEFAULT')
-@click.option('-k', '--key', type=click.Path())
+@click.option('-k', '--key', type=click.File())
 @click.argument('fingerprint', type=str, required=True)
 @click.argument('username')
 @click.argument('address', nargs=-1, required=True)
@@ -132,9 +138,10 @@ def add_user(obj, fingerprint: str, peergroup: str, key: os.PathLike,
              username: str, address):
     try:
         click.secho(f'Adding {username} to {peergroup}...', nl=False)
-        key_file = open(key).read()
+        key_file = open(key, 'rb').read()
         obj['PKNS'].get_peergroup(peergroup)
-        obj['PKNS'].add_user(key_file, username, list(address))
+        obj['PKNS'].add_user(key_file, username, set(address),
+                             fingerprint, peergroup)
         click.secho('OK', fg='green')
     except Exception:
         click.secho('FAILED', fg='red')
@@ -300,7 +307,7 @@ def query(obj, query: str):
              help='PKNS Sync')
 @click.argument('address', default='0.0.0.0')
 @click.pass_obj
-def query(obj, address: str):
+def sync(obj, address: str):
     from pprint import pprint
     request = PKNS_Request(address)
     packet = PKNS_Sync()
@@ -309,12 +316,16 @@ def query(obj, address: str):
         packet['sync'] = obj['PKNS'].resolve({'peergroup': '',
                                               'username': ''})
         sync = request.get(packet)
-        obj['PKNS'].sync(sync['reply'])
-        pprint(sync)
+        if sync['reply'] != 'FAILED':
+            obj['PKNS'].sync(sync['reply'])
+            pprint(sync)
+        else:
+            pprint(sync)
+            raise ValueError('Failed')
         click.secho(f'Synced to {address}', fg='green')
     except Exception as e:
-        raise
         click.secho('FAILED', fg='red')
+        raise click.ClickException(e)
 
 
 def main():
