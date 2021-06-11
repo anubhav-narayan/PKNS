@@ -4,15 +4,22 @@ version = "0.5.8"
 description = "Public Key Name System Framework"
 authors = ["Anubhav Mattoo <anubhavmattoo@outlook.com>"]
 license = "AGPLv3"
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.6"
 daemonocle = "^1.2.3"
 pycryptodome = "^3.10.1"
 click = "^8.0.1"
-sqlitedict = "^1.7.0"
+sqlitedict = "1.7.0"
+pickle5 = "^0.0.11"
+dill = "^0.3.3"
 
 [tool.poetry.dev-dependencies]
+
+
+[tool.poetry.scripts]
+pkns = "pkns.cli:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
