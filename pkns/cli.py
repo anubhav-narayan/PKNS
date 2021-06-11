@@ -3,7 +3,7 @@
 PKNS CLI
 '''
 
-__version__ = "0.3.0"
+__version__ = "0.3.5"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
 __license__ = "AGPLv3"
@@ -71,7 +71,7 @@ def add_peergroup(obj, username, name, key_file, out_path):
                                         rsa_size=4096, get_master=True)
         click.secho('OK', fg='green')
         click.secho(f'Writing Master Key at {out_path}...', nl=False)
-        with open(os.path.join(out_path, username+'.pem')) as f:
+        with open(os.path.join(out_path, username+'.pem'), 'wb') as f:
             f.write(key)
         click.secho('OK', fg='green')
     except Exception as fail:
@@ -129,16 +129,27 @@ def del_peergroup(obj, name: str):
 
 @tabman.command('add-user', short_help='Add Users to a Peergroup')
 @click.argument('peergroup', default='DEFAULT')
-@click.option('-k', '--key', type=click.File())
-@click.argument('fingerprint', type=str, required=True)
+@click.option('-k', '--key', type=click.File('rb'), default=None)
 @click.argument('username')
 @click.argument('address', nargs=-1, required=True)
 @click.pass_obj
-def add_user(obj, fingerprint: str, peergroup: str, key: os.PathLike,
-             username: str, address):
+def add_user(obj, peergroup: str, username: str, address,
+             key: str = None):
+    from hashlib import shake_128
     try:
         click.secho(f'Adding {username} to {peergroup}...', nl=False)
-        key_file = open(key, 'rb').read()
+        if key:
+            key_file = key.read()
+            fingerprint = shake_128(key_file).hexdigest(8)
+        else:
+            from Crypto.PublicKey import RSA
+            key = RSA.generate(4096)
+            key_file = key.public_key().export_key()
+            click.secho('Writing Master Key...', nl=False)
+            with open(os.path.join(username+'.pem'), 'wb') as f:
+                f.write(key.export_key())
+            click.secho('OK', fg='green')
+            fingerprint = shake_128(key_file).hexdigest(8)
         obj['PKNS'].get_peergroup(peergroup)
         obj['PKNS'].add_user(key_file, username, set(address),
                              fingerprint, peergroup)
@@ -206,7 +217,7 @@ def del_user(obj, peergroup: str, username: str):
               show_default=True)
 @click.pass_context
 def server(ctx, host: str, port: int):
-    ctx.obj['WORKER'] = PKNS_Server()
+    ctx.obj['WORKER'] = PKNS_Server(ip_address=host, port=port)
 
 
 @server.command('start', short_help='Start the PKNS Server')
@@ -292,14 +303,17 @@ def query(obj, query: str):
     if 'ipv4' in query:
         host = query.pop('ipv4')
     if 'port' in query:
-        port = int(query.pop('port'))
+        port = int(query.pop('port')[1:])
     else:
         port = 6300
     query.pop('base')
-    request = PKNS_Request(host, port)
-    packet = PKNS_Query()
-    packet['query'] = query
-    pprint(request.get(packet))
+    try:
+        request = PKNS_Request(host, port)
+        packet = PKNS_Query()
+        packet['query'] = query
+        pprint(request.get(packet))
+    except Exception as e:
+        raise click.ClickException(e)
 
 
 # Sync
