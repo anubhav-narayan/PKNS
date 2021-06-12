@@ -3,7 +3,7 @@
 PKNS CLI
 '''
 
-__version__ = "0.3.0"
+__version__ = "0.3.6"
 __author__ = "Anubhav Mattoo"
 __email__ = "anubhavmattoo@outlook.com"
 __license__ = "AGPLv3"
@@ -37,7 +37,7 @@ def cli(obj):
 
 
 # Path
-@cli.command('path', short_help='Table Path relative to HOME')
+@cli.command('path', short_help=f'Table Path relative to {os.environ["HOME"]}')
 @click.argument('path', type=click.Path(), default='.pkns')
 def path(path: str):
     global PATH
@@ -47,30 +47,49 @@ def path(path: str):
 
 
 # Table Manager
-@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager',
-           autocompletion=get_tabman_commands)
+@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager')
 @click.pass_obj
 def tabman(obj):
     pass
 
 
 @tabman.command('add-peergroup', short_help='Add/Create a Peergroup')
-@click.option('-n', '--name', required=True, type=str,
-              help='Name of the Peergroup')
+@click.argument('name', required=True, type=str)
 @click.option('-u', '--username', required=False, type=str,
               help='Your Peergroup Username', default='master',
               show_default=True)
-@click.option('-k', '--key-file', required=False, type=click.Path(),
+@click.option('-k', '--key-file', required=False, type=click.File('rb'),
               help='Explicit Keys for the Peergroup', default=None)
+@click.option('--rsa-size', required=False, type=int,
+              help='RSA Key Size', default=3072)
+@click.option('-o', '--out-path', type=click.Path(),
+              default=os.path.abspath('./'))
 @click.pass_obj
-def add_peergroup(obj, username, name, key_file):
+def add_peergroup(obj, username: str, name: str, key_file, out_path,
+                  rsa_size: int):
     try:
         click.secho(f'Adding Peergroup {name}...', nl=False)
-        obj['PKNS'].add_peergroup(name, username, key_file)
+        if key_file is not None:
+            key = obj['PKNS'].add_peergroup(name, username, key_file.read(),
+                                            get_master=True)
+        else:
+            key = obj['PKNS'].add_peergroup(name, username, key_file,
+                                            rsa_size=rsa_size, get_master=True)
         click.secho('OK', fg='green')
+        if key is not None:
+            click.secho(
+                f'Writing Master Key at {os.path.abspath(out_path)}...',
+                nl=False
+            )
+            with open(
+                     os.path.join(out_path, username+'_'+name+'.pem'),
+                     'wb'
+                 ) as f:
+                f.write(key)
+            click.secho('OK', fg='green')
     except Exception as fail:
         click.secho('FAILED', fg='red')
-        raise fail
+        raise click.ClickException(fail)
     pass
 
 
@@ -82,11 +101,14 @@ def get_peergroup(obj, name: str):
     try:
         click.secho(f'Finding Peergroup {name}...', nl=False)
         res = obj['PKNS'].get_peergroup(name)
-        click.secho('FOUND', fg='green')
+        if res != {}:
+            click.secho('FOUND', fg='green')
+            pprint(res)
+        else:
+            click.secho('NOT FOUND', fg='red')
     except Exception as fail:
         click.secho('FAILED', fg='red')
-        raise fail
-    pprint(res)
+        raise click.ClickException(fail)
 
 
 @tabman.command('rename-peergroup', short_help='Rename a Peergroup')
@@ -100,20 +122,19 @@ def rename_peergroup(obj, name: str, rename: str):
         click.secho(f'Renaming Peergroup {name} to {rename}...', nl=False)
         obj['PKNS'].rename_peergroup(name, rename)
         click.secho('OK', fg='green')
-    except Exception:
+    except Exception as fail:
         click.secho('FAILED', fg='red')
-        raise Exception
+        raise click.ClickException(fail)
     pass
 
 
 @tabman.command('del-peergroup', short_help='Delete/Leave a Peergroup')
-@click.option('-n', '--name', required=True, type=str,
-              help='Fingerprint of the Peergroup')
+@click.argument('fingerprint', required=True, type=str)
 @click.pass_obj
-def del_peergroup(obj, name: str):
+def del_peergroup(obj, fingerprint: str):
     try:
-        click.secho(f'Removing Peergroup {name}...', nl=False)
-        obj['PKNS'].remove_peergroup(name)
+        click.secho(f'Removing Peergroup {fingerprint}...', nl=False)
+        obj['PKNS'].remove_peergroup(fingerprint)
         click.secho('OK', fg='green')
     except Exception:
         click.secho('FAILED', fg='red')
@@ -122,23 +143,52 @@ def del_peergroup(obj, name: str):
 
 
 @tabman.command('add-user', short_help='Add Users to a Peergroup')
-@click.argument('peergroup', default='DEFAULT')
-@click.option('-k', '--key', type=click.Path())
-@click.argument('fingerprint', type=str, required=True)
-@click.argument('username')
+@click.option('-k', '--key', type=click.File('rb'), default=None,
+              help='Explicit Key File for User')
+@click.argument('username', type=str)
+@click.argument('peergroup', type=str)
 @click.argument('address', nargs=-1, required=True)
+@click.option('-o', '--out-path', type=click.Path(),
+              help='Master Key Output Path')
 @click.pass_obj
-def add_user(obj, fingerprint: str, peergroup: str, key: os.PathLike,
-             username: str, address):
+def add_user(obj, peergroup: str, username: str, address,
+             key: str = None, out_path: str = '.'):
+    '''
+    Add USERNAME to a PEERGROUP
+    '''
+    from hashlib import shake_128
     try:
-        click.secho(f'Adding {username} to {peergroup}...', nl=False)
-        key_file = open(key).read()
-        obj['PKNS'].get_peergroup(peergroup)
-        obj['PKNS'].add_user(key_file, username, list(address))
-        click.secho('OK', fg='green')
-    except Exception:
+        click.secho(f'Adding {username} to {peergroup}...')
+        if key:
+            key_file = key.read()
+            fingerprint = shake_128(key_file).hexdigest(8)
+        else:
+            from Crypto.PublicKey import RSA
+            key = RSA.generate(4096)
+            key_file = key.public_key().export_key()
+            click.secho('Writing Master Key...', nl=False)
+            with open(os.path.join(username+'.pem'), 'wb') as f:
+                f.write(key.export_key())
+            click.secho('OK', fg='green')
+            fingerprint = shake_128(key_file).hexdigest(8)
+        peergroups = obj['PKNS'].get_peergroup(peergroup)
+        if len(peergroups) < 1:
+            click.secho(f'Peergroup {peergroup} not found', color='red')
+            return
+        if len(peergroups) > 1:
+            click.secho(f'Multiple Peergroups named {peergroup}')
+            for x in peergroups:
+                click.secho(f'{x}:{x["name"]}')
+            peergroup = click.prompt('Enter Fingerprint',
+                                     default=[x for x in peergroups][0])
+        else:
+            peergroup = [x for x in peergroups][0]
+        obj['PKNS'].add_user(key_file, username, address,
+                             fingerprint, peergroup)
+        click.secho('DONE!', fg='green')
+    except Exception as fail:
         click.secho('FAILED', fg='red')
-        raise Exception
+        raise click.ClickException(fail)
     pass
 
 
@@ -150,12 +200,33 @@ def get_user(obj, peergroup: str, name: str):
     from pprint import pprint
     try:
         click.secho(f'Getting {name} from {peergroup}...', nl=False)
+        peergroups = obj['PKNS'].get_peergroup(peergroup)
+        if len(peergroups) < 1:
+            click.secho(f'Peergroup {peergroup} not found', color='red')
+            return
+        if len(peergroups) > 1:
+            click.secho(f'Multiple Peergroups named {peergroup}')
+            for x in peergroups:
+                click.secho(f'{x}:{x["name"]}')
+            peergroup = click.prompt('Enter Fingerprint',
+                                     default=[x for x in peergroups][0])
+        else:
+            peergroup = [x for x in peergroups][0]
         res = obj['PKNS'].get_user(peergroup, name)
-        click.secho('FOUND', fg='green')
+        ires = dict(
+            filter(
+                lambda x: type(x[1]) is dict,
+                res[peergroup].items()
+            )
+        )
+        if ires != {}:
+            click.secho('FOUND', fg='green')
+            pprint(res)
+        else:
+            click.secho('NOT FOUND', fg='red')
     except Exception:
         click.secho('FAILED', fg='red')
         raise Exception
-    pprint(res)
 
 
 @tabman.command('rename-user', short_help='Rename a User from a Peergroup')
@@ -167,6 +238,18 @@ def rename_user(obj, fingerprint: str, peergroup: str, rename: str):
     try:
         click.secho(f'Renaming {fingerprint} {rename} from {peergroup}...',
                     nl=False)
+        peergroups = obj['PKNS'].get_peergroup(peergroup)
+        if len(peergroups) < 1:
+            click.secho(f'Peergroup {peergroup} not found', color='red')
+            return
+        if len(peergroups) > 1:
+            click.secho(f'Multiple Peergroups named {peergroup}')
+            for x in peergroups:
+                click.secho(f'{x}:{x["name"]}')
+            peergroup = click.prompt('Enter Fingerprint',
+                                     default=[x for x in peergroups][0])
+        else:
+            peergroup = [x for x in peergroups][0]
         obj['PKNS'].rename_user(peergroup, fingerprint, rename)
         click.secho('OK', fg='green')
     except Exception:
@@ -177,12 +260,27 @@ def rename_user(obj, fingerprint: str, peergroup: str, rename: str):
 
 @tabman.command('del-user', short_help='Remove Users from a Peergroup')
 @click.argument('fingerprint', required=True)
-@click.option('-p', '--peergroup', required=True, help='Peergroup Fingerprint')
+@click.argument('peergroup', required=True)
 @click.pass_obj
-def del_user(obj, peergroup: str, username: str):
+def del_user(obj, peergroup: str, fingerprint: str):
+    '''
+    Delete FINGERPRINT from PEERGROUP
+    '''
     try:
-        click.secho(f'Removing {username} from {peergroup}...', nl=False)
-        obj['PKNS'].purge_user(fingerprint)
+        click.secho(f'Removing {fingerprint} from {peergroup}...', nl=False)
+        peergroups = obj['PKNS'].get_peergroup(peergroup)
+        if len(peergroups) < 1:
+            click.secho(f'Peergroup {peergroup} not found', color='red')
+            return
+        if len(peergroups) > 1:
+            click.secho(f'Multiple Peergroups named {peergroup}')
+            for x in peergroups:
+                click.secho(f'{x}:{x["name"]}')
+            peergroup = click.prompt('Enter Fingerprint',
+                                     default=[x for x in peergroups][0])
+        else:
+            peergroup = [x for x in peergroups][0]
+        obj['PKNS'].purge_user(fingerprint, peergroup)
         click.secho('OK', fg='green')
     except Exception:
         click.secho('FAILED', fg='red')
@@ -199,7 +297,7 @@ def del_user(obj, peergroup: str, username: str):
               show_default=True)
 @click.pass_context
 def server(ctx, host: str, port: int):
-    ctx.obj['WORKER'] = PKNS_Server()
+    ctx.obj['WORKER'] = PKNS_Server(ip_address=host, port=port)
 
 
 @server.command('start', short_help='Start the PKNS Server')
@@ -275,6 +373,7 @@ def ping(address, nop: int):
 @click.pass_obj
 def query(obj, query: str):
     from pprint import pprint
+    click.secho(f'Searching for {query}...', nl=False)
     query = parse(query)
     if 'domain' in query:
         host = query.pop('domain').split(':')[0]
@@ -285,14 +384,19 @@ def query(obj, query: str):
     if 'ipv4' in query:
         host = query.pop('ipv4')
     if 'port' in query:
-        port = int(query.pop('port'))
+        port = int(query.pop('port').strip(':'))
     else:
         port = 6300
     query.pop('base')
-    request = PKNS_Request(host, port)
-    packet = PKNS_Query()
-    packet['query'] = query
-    pprint(request.get(packet))
+    try:
+        request = PKNS_Request(host, port)
+        packet = PKNS_Query()
+        packet['query'] = query
+        click.secho('OK', fg='green')
+        pprint(request.get(packet))
+    except Exception as e:
+        click.secho('FAILED', fg='red')
+        raise click.ClickException(e)
 
 
 # Sync
@@ -300,7 +404,7 @@ def query(obj, query: str):
              help='PKNS Sync')
 @click.argument('address', default='0.0.0.0')
 @click.pass_obj
-def query(obj, address: str):
+def sync(obj, address: str):
     from pprint import pprint
     request = PKNS_Request(address)
     packet = PKNS_Sync()
@@ -309,12 +413,16 @@ def query(obj, address: str):
         packet['sync'] = obj['PKNS'].resolve({'peergroup': '',
                                               'username': ''})
         sync = request.get(packet)
-        obj['PKNS'].sync(sync['reply'])
-        pprint(sync)
+        if sync['reply'] != 'FAILED':
+            obj['PKNS'].sync(sync['reply'])
+            pprint(sync)
+        else:
+            pprint(sync)
+            raise ValueError('Failed')
         click.secho(f'Synced to {address}', fg='green')
     except Exception as e:
-        raise
         click.secho('FAILED', fg='red')
+        raise click.ClickException(e)
 
 
 def main():
