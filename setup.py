@@ -5,13 +5,13 @@ import os
 
 setup(
     name='pkns',
-    version='0.5.7',
+    version='0.5.8',
     description='PKNS Framework and CLI',
     author='Anubhav Mattoo',
     author_email='anubhavmattoo@outlook.com',
     packages=find_packages(),
     entry_points={
-        'console_scripts': ['pkns_cli=pkns.cli:main']
+        'console_scripts': ['pkns=pkns.cli:main']
     },
     install_requires=[
         'daemonocle',

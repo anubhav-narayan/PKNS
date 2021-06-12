@@ -20,6 +20,22 @@ from hashlib import shake_128
 import datetime
 
 
+def dict_merge(a, b):
+    '''
+    Recursive Dict Merge
+    '''
+    from copy import deepcopy
+    if not isinstance(b, dict):
+        return b
+    result = deepcopy(a)
+    for k, v in b.items():
+        if k in result and isinstance(result[k], dict):
+            result[k] = dict_merge(result[k], v)
+        else:
+            result[k] = deepcopy(v)
+    return result
+
+
 def get_constants(prefix):
     '''
     Create a dictionary mapping
@@ -48,8 +64,8 @@ class PKNS_Table():
                                      autocommit=True, tablename='peergroups')
         pass
 
-    def add_user(self, key: str, username: dict,
-                 address: list, fingerprint: str,
+    def add_user(self, key: bytes, username: str,
+                 address: tuple, fingerprint: str,
                  peergroup: str) -> None:
         '''
         Add or Update Entry in the Table
@@ -61,16 +77,19 @@ class PKNS_Table():
                                      tablename=peergroup)
         if fingerprint in self.pkns_table and\
            username != self.pkns_table[fingerprint]['username']:
-            raise ValueError("Invalid fingerprint")
+            raise ValueError("Invalid Fingerprint")
         if fingerprint in self.pkns_table and\
            username == self.pkns_table[fingerprint]['username']:
-            self.add_address(fingerprint, address)
+            self.pkns_table.close()
+            self.add_address(fingerprint, address, peergroup)
             return
         self.pkns_table[fingerprint] = {
                     'username': username,
-                    'address': set([address]),
+                    'address': address if type(address) is set
+                    else set(address),
                     'key': key
                 }
+        self.pkns_table.close()
 
     def add_address(self, fingerprint: str, address: tuple,
                     peergroup: str) -> None:
@@ -82,7 +101,11 @@ class PKNS_Table():
                                      self.path, 'pkns.db'),
                                      autocommit=True,
                                      tablename=peergroup)
-        self.pkns_table[fingerprint]['address'].add(address)
+        if type(address) is set:
+            self.pkns_table[fingerprint]['address'].update(address)
+        else:
+            self.pkns_table[fingerprint]['address'].update(set(address))
+        self.pkns_table.close()
 
     def remove_address(self, fingerprint: str, address: tuple,
                        peergroup: str) -> None:
@@ -95,11 +118,14 @@ class PKNS_Table():
                                      autocommit=True,
                                      tablename=peergroup)
         self.pkns_table[fingerprint]['address'].discard(address)
+        self.pkns_table.close()
 
-    def purge_user(self, fingerprint: str) -> None:
+    def purge_user(self, fingerprint: str, peergroup: str) -> None:
         '''
         Purge from Table
         '''
+        if peergroup not in self.peer_table:
+            raise ValueError("Invalid Peergroup")
         self.pkns_table = SqliteDict(os.path.join(
                                      os.environ['HOME'],
                                      self.path, 'pkns.db'),
@@ -108,29 +134,32 @@ class PKNS_Table():
         if fingerprint not in self.pkns_table:
             raise ValueError("Invalid Key")
         self.pkns_table.pop(fingerprint)
+        self.pkns_table.close()
 
     def add_peergroup(self, peergroup: str,
-                      username: str, key_file=None) -> None:
+                      username: str, key_file=None,
+                      rsa_size: int = 3072,
+                      get_master: bool = False) -> None or str:
         '''
         Add a Peer Group
         '''
         if peergroup in self.peer_table:
             raise NameError(f'{peergroup} already exists!')
-        if key_file is not None:
-            key_file = open(key_file, 'rb').read()
-        else:
-            key = RSA.generate(2048)
+        if key_file is None:
+            key = RSA.generate(rsa_size)
             key_public = key.publickey()
             key_file = key_public.export_key()
             master = key.export_key()
             fingerprint = shake_128(peergroup.encode('utf8') + key_file)\
                 .hexdigest(8)
             with open(os.path.join(os.environ['HOME'],
-                      f"{self.path}/master/{fingerprint}_MASTER.pem"), 'wb') as f:
+                      f"{self.path}", "master", f"{fingerprint}_MASTER.pem"),
+                      'wb') as f:
                 f.write(master)
             import stat
             os.chmod(os.path.join(os.environ['HOME'],
-                     f"{self.path}/master/{fingerprint}_MASTER.pem"), 0o600)
+                     f"{self.path}", "master", f"{fingerprint}_MASTER.pem"),
+                     0o600)
         self.peer_table[shake_128(peergroup.encode('utf8')
                         + key_file).hexdigest(8)] = {'name': peergroup,
                                                      'address': {'0.0.0.0', }}
@@ -138,6 +167,11 @@ class PKNS_Table():
                       '0.0.0.0', shake_128(key_file).hexdigest(8),
                       shake_128(peergroup.encode('utf8')
                                 + key_file).hexdigest(8))
+        if get_master:
+            try:
+                return key.export_key()
+            except Exception:
+                return None
 
     def remove_peergroup(self, peergroup: str):
         '''
@@ -183,18 +217,20 @@ class PKNS_Table():
             self.pkns_table = SqliteDict(os.path.join(
                                      os.environ['HOME'],
                                      self.path, 'pkns.db'),
-                                         autocommit=True, tablename=peergroup)
+                                     autocommit=True, tablename=peergroup)
             if username in self.pkns_table:
                 res = {username: self.pkns_table[username]}
-                res[username].pop('key', None)
+                if not get_key:
+                    res[username].pop('key', None)
                 self.pkns_table.close()
                 res.update(self.peer_table[peergroup])
                 return {peergroup: res}
             else:
                 res = {k: v for k, v in self.pkns_table.items()
                        if v['username'] == username}
-                for x in res:
-                    res[x].pop('key', None)
+                if not get_key:
+                    for x in res:
+                        res[x].pop('key', None)
                 self.pkns_table.close()
                 res.update(self.peer_table[peergroup])
                 return {peergroup: res}
@@ -208,19 +244,54 @@ class PKNS_Table():
                                     autocommit=True,
                                     tablename=peergroup)
                 if username in self.pkns_table:
-                    res = {username: self.pkns_table[peergroup]}
-                    res[username].pop('key', None)
+                    res = {username: self.pkns_table[username]}
+                    if not get_key:
+                        res[username].pop('key', None)
                     self.pkns_table.close()
                     res.update(peergroups[peergroup])
                     fres[peergroup] = res
                 else:
                     res = {k: v for k, v in self.pkns_table.items()
                            if v['username'] == username}
-                    for x in res:
-                        res[x].pop('key', None)
+                    if not get_key:
+                        for x in res:
+                            res[x].pop('key', None)
                     self.pkns_table.close()
                     res.update(peergroups[peergroup])
                     fres[peergroup] = res
+            return fres
+
+    def get_all_users(self, peergroup: str, fingerprint_only: bool = True):
+        '''
+        Get all users in the peergroup
+        '''
+        if peergroup in self.peer_table:
+            self.pkns_table = SqliteDict(os.path.join(
+                                     os.environ['HOME'],
+                                     self.path, 'pkns.db'),
+                                     autocommit=True, tablename=peergroup)
+            if fingerprint_only:
+                return list(self.pkns_table.keys())
+            fres = {}
+            fres[peergroup] = dict(self.pkns_table)
+            fres.update(self.peer_table[peergroup])
+            self.pkns_table.close()
+            return fres
+        else:
+            peergroups = self.get_peergroup(peergroup)
+            fres = {}
+            for peergroup in peergroups:
+                self.pkns_table = SqliteDict(os.path.join(
+                                    os.environ['HOME'],
+                                    self.path, 'pkns.db'),
+                                    autocommit=True,
+                                    tablename=peergroup)
+                fres[peergroup] = dict(self.pkns_table)
+                if fingerprint_only:
+                    fres[peergroup] = list(self.pkns_table.keys())
+                else:
+                    fres.update(self.peer_table[peergroup])
+                self.pkns_table.close()
             return fres
 
     def rename_user(self, peergroup: str, user: str, new_name: str):
@@ -241,6 +312,7 @@ class PKNS_Table():
         user_ = self.pkns_table[user]
         user_['username'] = new_name
         self.pkns_table[user] = user_
+        self.pkns_table.close()
 
     def resolve(self, query: dict) -> dict:
         '''
@@ -249,16 +321,24 @@ class PKNS_Table():
         peergroup = query['peergroup']
         username = query['username']
         if peergroup == '':
-            rpeers = {k: v for k, v in self.peer_table.items()}
+            rpeers = dict(self.peer_table)
         else:
             rpeers = self.get_peergroup(peergroup)
         if username == '':
             rusers = {}
+            for x in rpeers:
+                self.pkns_table = SqliteDict(os.path.join(
+                                            os.environ['HOME'],
+                                            self.path, 'pkns.db'),
+                                            autocommit=True,
+                                            tablename=x)
+                rusers[x] = dict(self.pkns_table)
+                rusers[x]['name'] = rpeers[x]['name']
+                rusers[x]['address'] = rpeers[x]['address']
+                self.pkns_table.close()
         else:
-            rusers = self.get_user(peergroup, username)
-        response = {}
-        rpeers.update(rusers)
-        response.update(rpeers)
+            rusers = self.get_user(peergroup, username, True)
+        response = dict_merge(rusers, rpeers)
         return response
 
     def sync(self, sync: dict) -> None:
@@ -268,15 +348,40 @@ class PKNS_Table():
         for x in sync:
             if x in self.peer_table:
                 data = self.peer_table[x]
+                data['name'] = sync[x]['name']
                 if type(sync[x]['address']) is set:
                     data['address'].update(sync[x]['address'])
-                else:
-                    data['address'].add(sync[x]['address'])
                 self.peer_table[x] = data
             else:
                 if type(sync[x]['address']) is not set:
+                    sync[x]['address'] = set(sync[x]['address'])
+                self.peer_table[x] = {}
+                self.peer_table[x]['name'] = sync[x]['name']
+                self.peer_table[x]['address'] = sync[x]['address']
+            sync[x].pop('name', None)
+            sync[x].pop('address', None)
+            self.sync_users(sync[x], x)
+
+    def sync_users(self, sync: dict, peergroup: str):
+        '''
+        PKNS User Sync
+        '''
+        self.pkns_table = SqliteDict(os.path.join(
+                                    os.environ['HOME'],
+                                    self.path, 'pkns.db'),
+                                    autocommit=True,
+                                    tablename=peergroup)
+        for x in sync:
+            if x in self.pkns_table:
+                data = self.pkns_table[x]
+                if type(sync[x]['address']) is set:
+                    data['address'].update(sync[x]['address'])
+                self.pkns_table[x] = data
+            else:
+                if type(sync[x]['address']) is not set:
                     sync[x]['address'] = {sync[x]['address'], }
-                self.peer_table[x] = sync[x]
+                self.pkns_table[x] = sync[x]
+        self.pkns_table.close()
 
 
 class Base_TCP_Bus():
@@ -311,11 +416,11 @@ class Base_TCP_Bus():
             raise ConnectionError("Recv bytes failed:{}".format(e))
         return bytes_
 
-    def _send_object_header(self, size, md5):
+    def _send_object_header(self, size, sign):
         try:
-            self._send_bytes(self._build_header(size, md5))
+            self._send_bytes(self._build_header(size, sign))
             ack = self._recv_bytes()
-            if not self._verify_ack(ack, size, md5):
+            if not self._verify_ack(ack, size, sign):
                 raise ConnectionError("ACK not matched")
         except Exception as e:
             self.socket.close()
@@ -326,18 +431,18 @@ class Base_TCP_Bus():
     def _recv_object_header(self):
         try:
             header = self._recv_bytes()
-            size, md5 = self._read_header(header)
-            ack = self._build_ack(size, md5)
+            size, sign = self._read_header(header)
+            ack = self._build_ack(size, sign)
             self._send_bytes(ack)
         except Exception as e:
             self.socket.close()
             raise ConnectionAbortedError(
                 "FAILED: Connection is unsecured and terminated: {}".format(e)
             )
-        return size, md5
+        return size, sign
 
     def recv(self):
-        size, md5 = self._recv_object_header()
+        size, sign = self._recv_object_header()
         try:
             bytes_ = b""
             while size > 0:
@@ -348,20 +453,20 @@ class Base_TCP_Bus():
                 bytes_ += buffer
                 if not buffer:
                     break
-            if md5 != Sign.md5(bytes_):
-                raise ConnectionError("Object md5 unmatched")
+            if sign != Sign.sha256(bytes_):
+                raise ConnectionError("Object sign unmatched")
             else:
                 obj = self._deserialize(bytes_)
         except Exception as e:
             self.socket.close()
             raise ConnectionAbortedError(
-                "FAILED: Receiving object failed: {}".format(e)
+                f"FAILED: Receiving object failed: {e}"
             )
         return obj
 
     def send(self, obj):
         data = self._serialize(obj)
-        self._send_object_header(size=len(data), md5=Sign.md5(data))
+        self._send_object_header(size=len(data), sign=Sign.sha256(data))
         self._send_bytes(data)
     # END Sections from Knight Bus
 
@@ -411,12 +516,12 @@ class PKNS_Server(Base_TCP_Bus):
         # Sync Handler
         if pack['tos'] == 'PKNS:SYNC':
             for i in pack['sync']:
-                pack['sync'][i]['address'] = a[0]
+                pack['sync'][i]['address'] = (a[0], )
             try:
                 table = PKNS_Table(self.pkns_path)
                 table.sync(pack['sync'])
                 x['reply'] = table.resolve({'peergroup': '', 'username': ''})
-            except Exception:
+            except Exception as e:
                 x['reply'] = 'FAILED'
         # Handler General
         x['status'] = 'WORKING'
@@ -579,7 +684,7 @@ def parse(query_str: str):
     if query['base'] == '':
         query['base'] = '127.0.0.1:6300'
         query['ipv4'] = '127.0.0.1'
-        query['port'] = '6300'
+        query['port'] = ':6300'
         query.pop('ipv6', None)
         query.pop('domain', None)
     return query
