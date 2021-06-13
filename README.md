@@ -10,7 +10,10 @@ To install from source use the following command, make sure you have `setuptools
 ```bash
 python3 seutp.py install
 ```
-We'll get to PyPI soon
+To install from PyPI
+```bash
+pip3 install pkns
+```
 ## Using the `PKNS_Table` API
 The `PKNS_Table` API is the core for the PKNS Local Services found in the `pknscore`
 ```python
