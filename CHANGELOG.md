@@ -1,3 +1,7 @@
+# v0.5.10
+1. Resolver Bug Fix
+2. Minor Improvements
+
 # v0.5.8
 1. User Sync
 2. CLI Bug Fixes

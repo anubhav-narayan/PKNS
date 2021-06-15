@@ -251,8 +251,10 @@ class PKNS_Table():
                     res.update(peergroups[peergroup])
                     fres[peergroup] = res
                 else:
-                    res = {k: v for k, v in self.pkns_table.items()
-                           if v['username'] == username}
+                    res = dict(
+                        filter(lambda x: x[1]['username'] == username,
+                               self.pkns_table.items())
+                    )
                     if not get_key:
                         for x in res:
                             res[x].pop('key', None)
@@ -290,7 +292,7 @@ class PKNS_Table():
                 if fingerprint_only:
                     fres[peergroup] = list(self.pkns_table.keys())
                 else:
-                    fres.update(self.peer_table[peergroup])
+                    fres[peergroup].update(self.peer_table[peergroup])
                 self.pkns_table.close()
             return fres
 
@@ -327,18 +329,12 @@ class PKNS_Table():
         if username == '':
             rusers = {}
             for x in rpeers:
-                self.pkns_table = SqliteDict(os.path.join(
-                                            os.environ['HOME'],
-                                            self.path, 'pkns.db'),
-                                            autocommit=True,
-                                            tablename=x)
-                rusers[x] = dict(self.pkns_table)
-                rusers[x]['name'] = rpeers[x]['name']
-                rusers[x]['address'] = rpeers[x]['address']
-                self.pkns_table.close()
+                rusers[x] = self.get_all_users(x, fingerprint_only=False)[x]
         else:
-            rusers = self.get_user(peergroup, username, True)
-        response = dict_merge(rusers, rpeers)
+            rusers = {}
+            for x in rpeers:
+                rusers[x] = self.get_user(x, username, True)[x]
+        response = dict_merge(rpeers, rusers)
         return response
 
     def sync(self, sync: dict) -> None:
