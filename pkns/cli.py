@@ -373,7 +373,7 @@ def ping(address, nop: int):
 @click.pass_obj
 def query(obj, query: str):
     from pprint import pprint
-    click.secho(f'Searching for {query}...', nl=False)
+    click.secho(f'Parsing {query}...', nl=False)
     query = parse(query)
     if 'domain' in query:
         host = query.pop('domain').split(':')[0]
@@ -388,6 +388,8 @@ def query(obj, query: str):
     else:
         port = 6300
     query.pop('base')
+    click.secho('OK', fg='green')
+    click.secho(f'Searching...', nl=False)
     try:
         request = PKNS_Request(host, port)
         packet = PKNS_Query()
