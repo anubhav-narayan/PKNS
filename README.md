@@ -1,7 +1,6 @@
 
 # Public Key Name System Framework
-[![Made with Python3](https://img.shields.io/badge/Made%20With-Python3-blue)](https://www.python.org/) [![GitHub license](https://img.shields.io/badge/license-AGPLv3-purple.svg)](https://github.com/anubhav-narayan/PKNS/blob/master/LICENSE) [![Github version](https://img.shields.io/badge/version-0.5.8-green)
-](http://github.com/anubhav-narayan/PKNS) [![Github status](https://img.shields.io/badge/status-Public%20Beta-green)
+[![Made with Python3](https://img.shields.io/badge/Made%20With-Python3-blue)](https://www.python.org/) [![GitHub license](https://img.shields.io/badge/license-AGPLv3-purple.svg)](https://github.com/anubhav-narayan/PKNS/blob/master/LICENSE) [![PyPI](https://img.shields.io/pypi/v/pkns?color=green&label=version)]() [![Github status](https://img.shields.io/badge/status-Public%20Beta-green)
 ](http://github.com/anubhav-narayan/PKNS) [![Made with](https://img.shields.io/badge/Built%20with-SQLite3%20|%20Click%20|%20Daemonocle%20|%20PyCryptodome-blue)](http://github.com/anubhav-narayan/PKNS)\
 This is the Public Key Name System Framework designed as a Public Key Exchange for both centralised and peer-to-peer services. It comes pre-built with useful and powerful CLI tools.
 ## Installation
