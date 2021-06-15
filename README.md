@@ -38,8 +38,8 @@ CLI Tools help manage the PKNS Tables and Servers easily, they also include usef
 ###  Local Table Manager `tabman`
 Managing Local Tables
 ```bash
-$ pkns_cli tabman
-Usage: pkns_cli tabman [OPTIONS] COMMAND [ARGS]...
+$ pkns tabman
+Usage: pkns tabman [OPTIONS] COMMAND [ARGS]...
 
   PKNS Table Manager
 
@@ -60,8 +60,8 @@ Commands:
 ### Server Manager `server`
 Server Utilities
 ```bash
-$ pkns_cli server
-Usage: pkns_cli server [OPTIONS] COMMAND [ARGS]...
+$ pkns server
+Usage: pkns server [OPTIONS] COMMAND [ARGS]...
 
   PKNS Server Manager
 
@@ -81,8 +81,8 @@ Commands:
 #### Ping
 Ping a Local or Remote Server
 ```bash
-$ pkns_cli ping --help
-Usage: pkns_cli ping [OPTIONS] [ADDRESS]
+$ pkns ping --help
+Usage: pkns ping [OPTIONS] [ADDRESS]
 
   PKNS Ping
 
@@ -94,8 +94,8 @@ Options:
 #### Query
 Query Local or Remote Server
 ```bash
-$ pkns_cli query --help
-Usage: pkns_cli query [OPTIONS] QUERY
+$ pkns query --help
+Usage: pkns query [OPTIONS] QUERY
 
   PKNS Query
 
@@ -105,8 +105,8 @@ Options:
 #### Sync
 Sync to Local or Remote Server
 ```bash
-$ pkns_cli sync --help
-Usage: pkns_cli sync [OPTIONS] [ADDRESS]
+$ pkns sync --help
+Usage: pkns sync [OPTIONS] [ADDRESS]
 
   PKNS Sync
 
