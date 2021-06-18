@@ -1,10 +1,25 @@
 [tool.poetry]
 name = "pkns"
-version = "0.5.11"
+version = "0.5.12"
 description = "Public Key Name System Framework"
 authors = ["Anubhav Mattoo <anubhavmattoo@outlook.com>"]
 license = "AGPL-3.0-or-later"
 readme = "README.md"
+homepage = "https://github.com/anubhav-narayan/PKNS"
+repository = "https://github.com/anubhav-narayan/PKNS"
+classifiers=[
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Topic :: Communications',
+        'Topic :: Internet',
+        'Topic :: Security :: Cryptography',
+        'Development Status :: 4 - Beta'
+]
 
 [tool.poetry.dependencies]
 python = "^3.6"
@@ -16,10 +31,20 @@ pickle5 = "^0.0.11"
 dill = "^0.3.3"
 
 [tool.poetry.dev-dependencies]
-
+python = "^3.6"
+daemonocle = "^1.2.3"
+pycryptodome = "^3.10.1"
+click = "^8.0.1"
+sqlitedict = "1.7.0"
+pickle5 = "^0.0.11"
+dill = "^0.3.3"
 
 [tool.poetry.scripts]
 pkns = "pkns.cli:main"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/anubhav-narayan/PKNS/issues"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

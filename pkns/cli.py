@@ -40,6 +40,9 @@ def cli(obj):
 @cli.command('path', short_help=f'Table Path relative to {os.environ["HOME"]}')
 @click.argument('path', type=click.Path(), default='.pkns')
 def path(path: str):
+    '''
+    Path Setting Utility
+    '''
     global PATH
     if not os.path.exists(os.path.join(os.environ['HOME'], path)):
         os.mkdir(os.path.join(os.environ['HOME'], path))
@@ -47,9 +50,12 @@ def path(path: str):
 
 
 # Table Manager
-@cli.group(short_help='PKNS Table Management', help='PKNS Table Manager')
+@cli.group(short_help='PKNS Table Management')
 @click.pass_obj
 def tabman(obj):
+    '''
+    PKNS Table Manager
+    '''
     pass
 
 
