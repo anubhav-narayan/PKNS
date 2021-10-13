@@ -2,19 +2,12 @@
 Object Transport Signing Meta Class
 Ported from loopyCryptor
 '''
-__version__ = "0.2.1"
-__author__ = "Anubhav Mattoo"
-__email__ = "anubhavmattoo@outlook.com"
-__license__ = "AGPLv3"
-__status__ = "Public Beta"
 
 from Crypto.Hash import (
     MD5,
     SHA3_256,
     SHA256
 )
-
-from .Serializer import *
 
 
 class Sign():
@@ -30,52 +23,32 @@ class Sign():
         raise AttributeError("DO NOT INIT, CYKA!")
 
     @staticmethod
-    def md5(obj, ret_hex=True):
+    def md5(obj: bytes, ret_hex=True) -> str or MD5:
         '''
         MD5 Signature of the Data
         '''
         md5_ = MD5.new()
-
-        if isinstance(obj, list):
-            for item in obj:
-                md5_.update(to_bytes(item))
-        elif len(to_bytes(obj)) > 500:
-            return Sign.md5(cut_bytes(to_bytes(obj), 500),
-                            ret_hex=ret_hex)
-        else:
-            md5_.update(to_bytes(obj))
+        md5_.update(obj)
         return md5_.hexdigest() if ret_hex else md5_
 
     @staticmethod
-    def sha256(obj, ret_hex=True):
+    def sha256(obj: bytes, ret_hex=True) -> str or SHA256:
         '''
         SHA256 Signature of the Data
         '''
         sha_ = SHA256.new()
-
-        if isinstance(obj, list):
-            for item in obj:
-                sha_.update(to_bytes(item))
-        elif len(to_bytes(obj)) > 1024:
-            return Sign.sha256(cut_bytes(to_bytes(obj), 1024),
-                               ret_hex=ret_hex)
-        else:
-            sha_.update(to_bytes(obj))
+        sha_.update(obj)
         return sha_.hexdigest() if ret_hex else sha_
 
     @staticmethod
-    def sha3_256(obj, ret_hex=True):
+    def sha3_256(obj: bytes, ret_hex=True) -> str or SHA3_256:
         '''
         SHA3_256 Signature of the Data
         '''
         sha_ = SHA3_256.new()
-
-        if isinstance(obj, list):
-            for item in obj:
-                sha_.update(to_bytes(item))
-        elif len(to_bytes(obj)) > 1024:
-            return Sign.sha3_256(cut_bytes(to_bytes(obj), 1024),
-                                 ret_hex=ret_hex)
-        else:
-            sha_.update(to_bytes(obj))
+        sha_.update(obj)
         return sha_.hexdigest() if ret_hex else sha_
+
+    @staticmethod
+    def sign(obj: bytes, sign_proto: callable):
+        return sign_proto(obj)
