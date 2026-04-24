@@ -1,8 +1,17 @@
 
 # Public Key Name System Framework
 [![Made with Python3](https://img.shields.io/badge/Made%20With-Python3-blue)](https://www.python.org/) [![GitHub license](https://img.shields.io/badge/license-AGPLv3-purple.svg)](https://github.com/anubhav-narayan/PKNS/blob/master/LICENSE) [![PyPI](https://img.shields.io/pypi/v/pkns?color=green&label=version)]() [![Github status](https://img.shields.io/badge/status-Public%20Beta-green)
-](http://github.com/anubhav-narayan/PKNS) [![Made with](https://img.shields.io/badge/Built%20with-SQLite3%20|%20Click%20|%20Daemonocle%20|%20PyCryptodome-blue)](http://github.com/anubhav-narayan/PKNS)\
+](http://github.com/anubhav-narayan/PKNS) [![Made with](https://img.shields.io/badge/Built%20with-db86%20|%20JSON%20|%20UDP%20|%20Click%20|%20Daemonocle%20|%20PyCryptodome-blue)](http://github.com/anubhav-narayan/PKNS)\
 This is the Public Key Name System Framework designed as a Public Key Exchange for both centralised and peer-to-peer services. It comes pre-built with useful and powerful CLI tools.
+
+## Key Features
+- **JSON-based Serialization** with optional zlib compression for efficient data exchange
+- **UDP Transport** for low-latency, connectionless communication
+- **Thread Pool Executor** for efficient multi-client request handling
+- **Master Key Vault** with network protection for secure key storage
+- **db86 JSON Database** for persistent, queryable data storage
+- **RSA Cryptography** for key generation and digital signatures
+
 ## Installation
 ### From source
 To install from source use the following command, make sure you have `setuptools>=50.0.0`
@@ -20,14 +29,35 @@ from pkns.pknscore import PKNS_Table
 new_table = PKNS_Table(PATH_TO_A_TABLE_DIR)
 ```
  `PATH_TO_A_TABLE` can be a path to an existing table directory or a new table directory, defaults to `~/.pkns`.
- The API provides all basic table operations.
+ The API provides all basic table operations and secure master key management.
+
+### Master Key Vault
+Master keys for peergroups are stored in an encrypted vault within the database and are **never exposed over the network**:
+```python
+# Get master key (local-only operation)
+master_key = table.get_master_key(fingerprint)
+
+# List all master keys
+keys = table.list_master_keys()
+
+# Remove a master key
+table.remove_master_key(fingerprint)
+```
+
  ## Using the `PKNS_Server` API
- The `PKNS_Server` API is the core of PKNS Network Services found in the  `pknscore`. It provides the correct server handling and configuration for a hosted PKNS Services. The PKNS service runs on the default port `6300` .  It is capable to handle multiple clients and process multiple requests and can be safely daemonized.
+ The `PKNS_Server` API is the core of PKNS Network Services found in the  `pknscore`. It provides the correct server handling and configuration for a hosted PKNS Services. The PKNS service runs on the default port `6300` over UDP. It efficiently handles multiple concurrent clients using a configurable thread pool and can be safely daemonized.
  ```python
  from pkns.pknscore import PKNS_Server
- server = PKNS_Server(IP_ADDR, PORT, PATH_TO_A_TABLE_DIR)
+ server = PKNS_Server(IP_ADDR, PORT, PATH_TO_A_TABLE_DIR, max_workers=10)
  ```
- `IP_ADDR` is the IP Address to use for the server, defaults to `0.0.0.0`,  `PORT` is the port to be used for the server, defaults to `6300`,  `PATH_TO_A_TABLE` can be a path to an existing table directory or a new table directory, defaults to `~/.pkns`.
+ `IP_ADDR` is the IP Address to bind to, defaults to `0.0.0.0`,  `PORT` is the port to be used for the server, defaults to `6300`,  `PATH_TO_A_TABLE` can be a path to an existing table directory or a new table directory, defaults to `~/.pkns`, and `max_workers` is the number of worker threads in the pool, defaults to `10`.
+
+### UDP Transport
+The server uses UDP for fast, stateless communication:
+- Single-packet request/response model for low latency
+- Automatic payload signing with SHA256
+- JSON serialization with optional zlib compression
+
 ## Query Syntax
 PKNS Query is used for better integration of centralised servers. The query follows a fixed Syntax
 ```
@@ -113,3 +143,29 @@ Usage: pkns sync [OPTIONS] [ADDRESS]
 Options:
   --help  Show this message and exit.
 ```
+
+## Technical Architecture
+
+### Serialization Layer
+- **JSON-based serialization** for structured, human-readable data exchange
+- **Zlib compression** (optional) reduces payload size with `PKNSZ` prefix for detection
+- **Type preservation** for bytes (base64-encoded) and tuples (preserved through round-trip)
+- Replaces legacy pickle5 for better compatibility with db86 JSON storage
+
+### Network Layer
+- **UDP transport** (BaseUDPBus) for fast, connectionless communication
+- Single-packet request/response model with SHA256 signing
+- **Thread pool executor** on server side for efficient concurrent request handling
+- Automatic sender address tracking for reply routing
+
+### Storage Layer
+- **db86 JSON Database** for persistent key-value storage
+- Automatic schema creation for peergroups and users
+- **Master Key Vault** protected from network access for secure cryptographic key storage
+- Per-peergroup user tables for flexible data organization
+
+### Security
+- Master keys stored only in local vault, never transmitted over network
+- Protected tables (`vault`, `peergroups`) block unauthorized queries
+- SHA256-signed messages prevent tampering
+- RSA key generation with configurable sizes (default 3072-bit)
