@@ -28,7 +28,7 @@ jobs:
 
       - name: Build release distributions
         run: |
-          apt install -y python3-poetry
+          python3 -m pip install poetry
           poetry --version
           poetry build
 
