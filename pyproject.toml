@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pkns"
-version = "0.5.12"
+version = "0.6.0"
 description = "Public Key Name System Framework"
 authors = ["Anubhav Mattoo <anubhavmattoo@outlook.com>"]
 license = "AGPL-3.0-or-later"
@@ -22,21 +22,19 @@ classifiers=[
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.10"
 daemonocle = "^1.2.3"
 pycryptodome = "^3.10.1"
 click = "^8.0.1"
-sqlitedict = "1.7.0"
-pickle5 = "^0.0.11"
+db86 = "^0.7.0"
 dill = "^0.3.3"
 
 [tool.poetry.dev-dependencies]
-python = "^3.6"
+python = "^3.10"
 daemonocle = "^1.2.3"
 pycryptodome = "^3.10.1"
 click = "^8.0.1"
-sqlitedict = "1.7.0"
-pickle5 = "^0.0.11"
+db86 = "^0.7.0"
 dill = "^0.3.3"
 
 [tool.poetry.scripts]
